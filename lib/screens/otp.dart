@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:gardians/screens/permission.dart';
 import 'package:pinput/pinput.dart';
 import 'dart:async'; 
-import 'package:flutter/services.dart';
 
 class OTPScreen extends StatefulWidget {
   const OTPScreen({super.key});
@@ -143,7 +142,7 @@ class _OTPScreenState extends State<OTPScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
               ),
               onPressed: () {
-                // 1. رسالة النجاح الصغيرة (SnackBar)
+                
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: const Row(
@@ -161,7 +160,7 @@ class _OTPScreenState extends State<OTPScreen> {
                   ),
                 );
 
-                // 2. الانتقال السريع للشاشة التانية
+                
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => const ParentGrantPermissions()),

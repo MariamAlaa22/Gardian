@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:gardians/screens/childhome.dart';
 
 class ParentGrantPermissions extends StatefulWidget {
@@ -15,7 +14,7 @@ class _ParentGrantPermissionsState extends State<ParentGrantPermissions> {
 
   bool isLocationEnabled = false;
   bool isUsageEnabled = false;
-  bool isOverlayEnabled = false; // مهمة جداً للأهالي عشان يقفلوا التطبيقات
+  bool isOverlayEnabled = false;  
 
   @override
   Widget build(BuildContext context) {
@@ -24,13 +23,13 @@ class _ParentGrantPermissionsState extends State<ParentGrantPermissions> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        automaticallyImplyLeading: false, // مسحنا سهم الرجوع
+        automaticallyImplyLeading: false,  
         title: Padding(
           padding: const EdgeInsets.only(left: 10),
           
         ),
         actions: [
-          // الـ Step Indicator (2/2)
+          
           Container(
             margin: const EdgeInsets.only(right: 20, top: 12, bottom: 12),
             padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -50,7 +49,7 @@ class _ParentGrantPermissionsState extends State<ParentGrantPermissions> {
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 25),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start, // خليناه Start عشان يبقى جدي أكتر
+          crossAxisAlignment: CrossAxisAlignment.start,  
           children: [
             Text(
               "Setup Child's Device",
@@ -63,7 +62,7 @@ class _ParentGrantPermissionsState extends State<ParentGrantPermissions> {
             ),
             const SizedBox(height: 35),
 
-            // 1. Location (Real-time tracking)
+            
             _buildPermissionItem(
               title: "Location Services",
               desc: "Allows you to track your child's live location and set safe zones.",
@@ -72,7 +71,7 @@ class _ParentGrantPermissionsState extends State<ParentGrantPermissions> {
               onBtnPressed: () => setState(() => isLocationEnabled = true),
             ),
 
-            // 2. Usage Stats (App Monitoring)
+            
             _buildPermissionItem(
               title: "App Usage Access",
               desc: "Enables screen time reports and app blocking capabilities.",
@@ -81,7 +80,7 @@ class _ParentGrantPermissionsState extends State<ParentGrantPermissions> {
               onBtnPressed: () => setState(() => isUsageEnabled = true),
             ),
 
-            // 3. Screen Overlay (Control)
+            
             _buildPermissionItem(
               title: "Screen Overlay",
               desc: "Required to show the 'Time's Up' screen and block restricted apps.",
@@ -92,18 +91,14 @@ class _ParentGrantPermissionsState extends State<ParentGrantPermissions> {
 
             const Spacer(),
 
-            // زرار التأكيد النهائي
+            
             SizedBox(
               width: double.infinity,
               height: 55,
               child: ElevatedButton(
-                // جوه شاشة ParentGrantPermissions في الـ ElevatedButton
+                
 onPressed: (isLocationEnabled && isUsageEnabled && isOverlayEnabled)
     ? () {
-        // 1. هزة خفيفة للنجاح
-        //HapticFeedback.successImpact();
-
-        // 2. إظهار الـ SnackBar اللي اتفقنا عليها
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text("Protection Activated! 🛡️", 
@@ -114,11 +109,11 @@ onPressed: (isLocationEnabled && isUsageEnabled && isOverlayEnabled)
           ),
         );
 
-        // 3. الانتقال لشاشة الطفل ومسح كل اللي فات (عشان ميرجعش بضهره)
+        
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const ChildHomeScreen()),
-          (route) => false, // السطر ده هو اللي بيمسح الـ History
+          (route) => false,  
         );
       }
     : null,

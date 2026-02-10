@@ -58,7 +58,6 @@ class _AddChildScreenState extends State<AddChildScreen> {
 
             const SizedBox(height: 40),
 
-            // 3. حقل إدخال الاسم
             Align(
               alignment: Alignment.centerLeft,
               child: Text("Child's Name", 
@@ -80,7 +79,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
 
             const SizedBox(height: 30),
 
-            // 4. اختيار السن (Horizontal Age Picker)
+            // (Horizontal Age Picker)
             Align(
               alignment: Alignment.centerLeft,
               child: Text("Child's Age", 
@@ -91,24 +90,22 @@ class _AddChildScreenState extends State<AddChildScreen> {
               height: 60,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                itemCount: 15, // مثلاً من سن 2 لـ 17
+                itemCount: 15, 
                 itemBuilder: (context, index) {
                   int age = index + 2;
                   bool isSelected = age == selectedAge;
                   return GestureDetector(
                     onTap: () => setState(() => selectedAge = age),
-                  child: AnimatedContainer( // استخدمت AnimatedContainer عشان التنقل بين الأرقام يكون ناعم
+                  child: AnimatedContainer( 
         duration: const Duration(milliseconds: 300),
         width: 60,
         margin: const EdgeInsets.only(right: 15),
         decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          // لو مختار السن نخليه كحلي صريح، لو لا يبقى سماوي فاتح
+          shape: BoxShape.circle,  
           border: Border.all(
             color: isSelected ? navyBlue : skyBlue.withAlpha(100),
-            width: isSelected ? 3 : 1.5, // نكبر السمك شوية للي مختارينه
+            width: isSelected ? 3 : 1.5,  
           ),
-          // الخلفية للسن المختار ممكن تكون سماوي فاتح جداً عشان يبرز
           color: isSelected ? skyBlue.withAlpha(40) : Colors.transparent,
         ),
         child: Center(
@@ -117,7 +114,6 @@ class _AddChildScreenState extends State<AddChildScreen> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              // الرقم المختار كحلي، واللي مش مختار كحلي شفاف (عشان نبعد عن الأسود خالص)
               color: isSelected ? navyBlue : navyBlue.withAlpha(120),
             ),
           ),
@@ -129,7 +125,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
 
             const SizedBox(height: 60),
 
-            // 5. زرار Continue
+            //  Continue
             SizedBox(
               width: double.infinity,
               height: 55,
@@ -141,7 +137,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: navyBlue, // لون السماوي اللي في الصورة
+                  backgroundColor: navyBlue,   
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   elevation: 0,
                 ),

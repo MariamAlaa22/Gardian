@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gardians/screens/parent.dart'; // تأكدي من المسار الصح
+import 'package:gardians/screens/parent.dart';  
 
 class Welcome extends StatefulWidget {
   const Welcome({super.key});
@@ -10,7 +10,7 @@ class Welcome extends StatefulWidget {
 class _WelcomeState extends State<Welcome> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  final int _totalPages = 4; // عدد الصفحات الكلي
+  final int _totalPages = 4;  
 
   final Color navyBlue = const Color(0xFF042459);
   final Color skyBlue = const Color(0xFF9ED7EB);
@@ -40,7 +40,6 @@ class _WelcomeState extends State<Welcome> {
             ),
           ),
 
-          // Indicators (Dots)
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(_totalPages, (index) => buildDot(index)),
@@ -52,7 +51,6 @@ class _WelcomeState extends State<Welcome> {
             padding: const EdgeInsets.only(bottom: 50, left: 30, right: 30),
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 500),
-              // هيفحص لو وصلنا لآخر صفحة (رقم 3)
               child: _currentPage == _totalPages - 1
                   ? _buildGetStartedButton()
                   : _buildNextCircleButton(),
@@ -63,7 +61,7 @@ class _WelcomeState extends State<Welcome> {
     );
   }
 
-  // زرار الـ Get Started اللي بيظهر في الآخر
+
   Widget _buildGetStartedButton() {
     return SizedBox(
       key: const ValueKey("getStarted"),
@@ -76,7 +74,6 @@ class _WelcomeState extends State<Welcome> {
           elevation: 0,
         ),
         onPressed: () {
-          // هنا بنوجهه لصفحة الاختيار (الـ Role Screen) اللي عملناها
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const Parent())); 
         },
         child: const Text(
@@ -87,7 +84,6 @@ class _WelcomeState extends State<Welcome> {
     );
   }
 
-  // زرار الدائرة اللي بيلف مع الـ Progress
   Widget _buildNextCircleButton() {
     return GestureDetector(
       key: const ValueKey("nextButton"),
@@ -104,7 +100,7 @@ class _WelcomeState extends State<Welcome> {
             width: 85,
             height: 85,
             child: TweenAnimationBuilder<double>(
-              // الـ Progress بيبدأ من 0.25 (أول صفحة) لحد 0.75 (قبل الأخيرة)
+              
               tween: Tween<double>(begin: 0, end: (_currentPage + 1) / _totalPages),
               duration: const Duration(milliseconds: 500),
               builder: (context, value, child) => CircularProgressIndicator(
@@ -126,7 +122,6 @@ class _WelcomeState extends State<Welcome> {
     );
   }
 
-  // Helper Widgets
   Widget buildPageContent(String image, String title, String desc) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,

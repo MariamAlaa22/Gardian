@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class PairingCodeScreen extends StatelessWidget {
-  final String pairCode = "582 941"; // ده رقم تجريبي، الـ Backend هو اللي بيبعته
+  final String pairCode = "582 941";  
   final Color navyBlue = const Color(0xFF042459);
 
   const PairingCodeScreen({super.key});
@@ -25,7 +25,7 @@ class PairingCodeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 40),
               
-              // عرض الكود بشكل شيك
+              
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
                 decoration: BoxDecoration(
@@ -40,7 +40,7 @@ class PairingCodeScreen extends StatelessWidget {
               ),
               
               const SizedBox(height: 50),
-              //const CircularProgressIndicator(), 
+              
               const SizedBox(height: 20),
               const Text("Waiting for child device...", style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey)),
             ],

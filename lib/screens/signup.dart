@@ -41,9 +41,9 @@ class _SignupState extends State<Signup> {
         decoration: InputDecoration(
           hintText: label,
           hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
-          prefixIcon: Icon(icon, color: const Color(0xFF5AB9D9)), // سماوي أغمق سنة للأيقونة
+          prefixIcon: Icon(icon, color: const Color(0xFF5AB9D9)),  
           filled: true,
-          fillColor: const Color(0x4D9ED7EB), // نفس شفافية مربعات الـ OTP (20%)
+          fillColor: const Color(0x4D9ED7EB),  
           contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(50),

@@ -12,7 +12,7 @@ class ChildHomeScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // الجزء العلوي (Header)
+          //   (Header)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.only(top: 60, bottom: 30, left: 25, right: 25),
@@ -46,16 +46,13 @@ class ChildHomeScreen extends StatelessWidget {
 
           const SizedBox(height: 40),
 
-          // كروت المعلومات
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 25),
             child: Column(
               children: [
-                // كارت الـ Screen Time
-                
+
                 const SizedBox(height: 40),
 
-                // رسالة الأمان
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -79,10 +76,7 @@ class ChildHomeScreen extends StatelessWidget {
               ],
             ),
           ),
-          
-          const Spacer(),
-          
-          // زرار بسيط للإعدادات أو المساعدة
+                  
         
           const SizedBox(height: 30),
         ],

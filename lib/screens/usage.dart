@@ -18,10 +18,16 @@ class AppUsageScreen extends StatelessWidget {
           icon: Icon(Icons.arrow_back_ios, color: navyBlue),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text("App Usage", style: TextStyle(color: navyBlue, fontWeight: FontWeight.bold)),
+        title: Text(
+          "App Usage",
+          style: TextStyle(color: navyBlue, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
         actions: [
-          IconButton(icon: Icon(Icons.calendar_month_outlined, color: navyBlue), onPressed: () {}),
+          IconButton(
+            icon: Icon(Icons.calendar_month_outlined, color: navyBlue),
+            onPressed: () {},
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -29,23 +35,54 @@ class AppUsageScreen extends StatelessWidget {
         child: Column(
           children: [
             _buildTotalUsageChart(),
-            
+
             const SizedBox(height: 30),
-            
+
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text("Most Used Apps", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: navyBlue)),
+                Text(
+                  "Most Used Apps",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: navyBlue,
+                  ),
+                ),
                 TextButton(onPressed: () {}, child: const Text("See All")),
               ],
             ),
-            
+
             const SizedBox(height: 10),
-            
-            _buildAppItem("TikTok", "2h 15m", "Social", Icons.tiktok, Colors.black),
-            _buildAppItem("Roblox", "1h 45m", "Games", Icons.gamepad, Colors.blue),
-            _buildAppItem("Duolingo", "52m", "Education", Icons.language, Colors.green),
-            _buildAppItem("Instagram", "45m", "Social", Icons.camera_alt, Colors.pink),
+
+            _buildAppItem(
+              "TikTok",
+              "2h 15m",
+              "Social",
+              Icons.tiktok,
+              Colors.black,
+            ),
+            _buildAppItem(
+              "Roblox",
+              "1h 45m",
+              "Games",
+              Icons.gamepad,
+              Colors.blue,
+            ),
+            _buildAppItem(
+              "Duolingo",
+              "52m",
+              "Education",
+              Icons.language,
+              Colors.green,
+            ),
+            _buildAppItem(
+              "Instagram",
+              "45m",
+              "Social",
+              Icons.camera_alt,
+              Colors.pink,
+            ),
           ],
         ),
       ),
@@ -71,17 +108,45 @@ class AppUsageScreen extends StatelessWidget {
                     sectionsSpace: 5,
                     centerSpaceRadius: 70,
                     sections: [
-                      PieChartSectionData(color: skyBlue, value: 40, radius: 15, showTitle: false),
-                      PieChartSectionData(color: Colors.blueAccent, value: 35, radius: 15, showTitle: false),
-                      PieChartSectionData(color: navyBlue, value: 25, radius: 15, showTitle: false),
+                      PieChartSectionData(
+                        color: skyBlue,
+                        value: 40,
+                        radius: 15,
+                        showTitle: false,
+                      ),
+                      PieChartSectionData(
+                        color: Colors.blueAccent,
+                        value: 35,
+                        radius: 15,
+                        showTitle: false,
+                      ),
+                      PieChartSectionData(
+                        color: navyBlue,
+                        value: 25,
+                        radius: 15,
+                        showTitle: false,
+                      ),
                     ],
                   ),
                 ),
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text("6h 42m", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: navyBlue)),
-                    const Text("TODAY", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                    Text(
+                      "6h 42m",
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: navyBlue,
+                      ),
+                    ),
+                    const Text(
+                      "TODAY",
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -95,7 +160,7 @@ class AppUsageScreen extends StatelessWidget {
               _chartLegend(Colors.blueAccent, "Social", "3h 22m"),
               _chartLegend(navyBlue, "Edu", "1h 05m"),
             ],
-          )
+          ),
         ],
       ),
     );
@@ -108,7 +173,10 @@ class AppUsageScreen extends StatelessWidget {
           children: [
             CircleAvatar(radius: 5, backgroundColor: color),
             const SizedBox(width: 5),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+            Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            ),
           ],
         ),
         Text(time, style: const TextStyle(color: Colors.grey, fontSize: 11)),
@@ -116,7 +184,13 @@ class AppUsageScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAppItem(String name, String time, String cat, IconData icon, Color iconCol) {
+  Widget _buildAppItem(
+    String name,
+    String time,
+    String cat,
+    IconData icon,
+    Color iconCol,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(12),
@@ -129,15 +203,27 @@ class AppUsageScreen extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: iconCol.withOpacity(0.1), borderRadius: BorderRadius.circular(15)),
+            decoration: BoxDecoration(
+              color: iconCol.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(15),
+            ),
             child: Icon(icon, color: iconCol),
           ),
           const SizedBox(width: 15),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              Text("$time • $cat", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+              Text(
+                name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              Text(
+                "$time • $cat",
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
             ],
           ),
           const Spacer(),
@@ -146,12 +232,14 @@ class AppUsageScreen extends StatelessWidget {
               backgroundColor: navyBlue,
               foregroundColor: Colors.white,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               padding: const EdgeInsets.symmetric(horizontal: 20),
             ),
             onPressed: () {},
             child: const Text("Limit", style: TextStyle(fontSize: 12)),
-          )
+          ),
         ],
       ),
     );

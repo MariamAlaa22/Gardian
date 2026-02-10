@@ -67,7 +67,6 @@ class Parent extends StatelessWidget {
     ),
     const SizedBox(height: 15),
     
-    // 2. زرار إنشاء حساب جديد (ثانوي)
     SizedBox(
       width: 280,
       height: 55,
@@ -89,11 +88,10 @@ class Parent extends StatelessWidget {
     
     const SizedBox(height: 30),
     
-    // 3. زرار الطفل (بشكل مختلف خالص عشان ما يتلخبطش)
     RichText(
   text: TextSpan(
     style: TextStyle(
-      color: navyBlue.withValues(alpha: 0.5), // اللون الهادي للنص العادي
+      color: navyBlue.withValues(alpha: 0.5),  
       fontSize: 14,
     ),
     children: [
@@ -101,13 +99,13 @@ class Parent extends StatelessWidget {
       TextSpan(
         text: "Click here",
         style: TextStyle(
-          color: navyBlue, // لون الكحلي الصريح للكلمة اللي بتداس
+          color: navyBlue,  
           fontWeight: FontWeight.bold,
-          decoration: TextDecoration.underline, // خط تحتها عشان تبان إنها لينك
+          decoration: TextDecoration.underline,  
         ),
         recognizer: TapGestureRecognizer()
           ..onTap = () {
-            // التوجيه لشاشة الـ OTP بتاعة الطفل
+            
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const OTPScreen()),

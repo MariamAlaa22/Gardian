@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class AppRulesScreen extends StatefulWidget { // حولناه لـ StatefulWidget
+class AppRulesScreen extends StatefulWidget {  
   const AppRulesScreen({super.key});
 
   @override

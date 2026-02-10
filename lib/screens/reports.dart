@@ -5,7 +5,7 @@ class WeeklyReportScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // تعريف الألوان جوه الـ build عشان نتجنب أي Errors مع withValues
+    
     final Color navyBlue = const Color(0xFF042459);
     final Color skyBlue = const Color(0xFF9ED7EB);
 
@@ -27,7 +27,7 @@ class WeeklyReportScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. كارت ملخص الوقت الإجمالي
+
             _buildSummaryCard(navyBlue, skyBlue),
             
             const SizedBox(height: 30),
@@ -36,12 +36,10 @@ class WeeklyReportScreen extends StatelessWidget {
               style: TextStyle(color: navyBlue, fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
 
-            // 2. الرسم البياني للأعمدة
             _buildBarChart(navyBlue, skyBlue),
 
             const SizedBox(height: 30),
 
-            // 3. كروت الإحصائيات الصغيرة (Safety Score & Pickups)
             Row(
               children: [
                 _buildSmallStatCard("Safety Score", "8/10", Icons.shield_outlined, navyBlue, skyBlue),
@@ -52,7 +50,7 @@ class WeeklyReportScreen extends StatelessWidget {
 
             const SizedBox(height: 30),
 
-            // 4. أكتر تطبيقات استخدماً
+
             Text("Top Used Apps", 
               style: TextStyle(color: navyBlue, fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 15),
@@ -62,13 +60,12 @@ class WeeklyReportScreen extends StatelessWidget {
             
             const SizedBox(height: 40),
 
-            // 5. زرار إرسال التقرير (إضافة احترافية)
             SizedBox(
               width: double.infinity,
               height: 55,
               child: ElevatedButton.icon(
                 onPressed: () {
-                  // Logic لإرسال التقرير للإيميل
+                  
                 },
                 icon: const Icon(Icons.email_outlined),
                 label: const Text("Send Report to Email", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -86,7 +83,6 @@ class WeeklyReportScreen extends StatelessWidget {
     );
   }
 
-  // --- Widgets مساعدة لتقليل زحمة الكود ---
 
   Widget _buildSummaryCard(Color navy, Color sky) {
     return Container(

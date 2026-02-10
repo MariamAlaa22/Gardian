@@ -9,10 +9,8 @@ class ChildLocationScreen extends StatefulWidget {
 }
 
 class _ChildLocationScreenState extends State<ChildLocationScreen> {
-  // 1. تحديد إحداثيات الطفل (مؤقتاً القاهرة)
   static const LatLng _childPos = LatLng(30.0444, 31.2357);
   
-  // 2. كود التحكم في الخريطة
   late GoogleMapController mapController;
 
   @override
@@ -20,14 +18,13 @@ class _ChildLocationScreenState extends State<ChildLocationScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // 3. الـ Widget الحقيقي للخريطة
           GoogleMap(
             initialCameraPosition: const CameraPosition(
               target: _childPos,
               zoom: 15,
             ),
             onMapCreated: (controller) => mapController = controller,
-            zoomControlsEnabled: false, // بنقفل الزراير عشان شكل الـ UI يبقى نظيف
+            zoomControlsEnabled: false,  
             markers: {
               const Marker(
                 markerId: MarkerId('child_location'),
@@ -37,7 +34,6 @@ class _ChildLocationScreenState extends State<ChildLocationScreen> {
             },
           ),
 
-          // 4. زرار الرجوع (نفس الـ UI اللي عملناه)
           Positioned(
             top: 50,
             left: 20,
@@ -48,7 +44,6 @@ class _ChildLocationScreenState extends State<ChildLocationScreen> {
             ),
           ),
 
-          // 5. الكارت السفلي اللي فيه البيانات
           _buildInfoCard(),
         ],
       ),
@@ -69,7 +64,7 @@ class _ChildLocationScreenState extends State<ChildLocationScreen> {
         ),
         child: Column(
           children: [
-             // حطي هنا الـ Column اللي عملناه قبل كدة (الاسم، العنوان، البطارية)
+              
               const Text("Yassin's Location", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               const Text("22 Tahrir Street, Dokki, Giza", style: TextStyle(color: Colors.grey)),
