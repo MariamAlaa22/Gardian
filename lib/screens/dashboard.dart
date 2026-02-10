@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:gardians/screens/commdetails.dart';
 import 'package:gardians/screens/devices.dart';
 import 'package:gardians/screens/alertsettings.dart';
 import 'package:gardians/screens/alerts.dart';
@@ -247,6 +248,8 @@ class _ParentDashboardState extends State<ParentDashboard> {
             ],
           ),
           const SizedBox(height: 20),
+          _buildCommunicationSection(),
+          SizedBox(height: 20),
         ],
       ),
     );
@@ -674,4 +677,108 @@ class _ParentDashboardState extends State<ParentDashboard> {
       ),
     );
   }
+  Widget _buildCommunicationSection() {
+  return Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: const Color(0x4D9ED7EB), 
+      borderRadius: BorderRadius.circular(25), 
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "CALLS & MESSAGES",
+              style: TextStyle(
+                fontSize: 12,
+                color: navyBlue.withValues(alpha: 0.5),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            GestureDetector(
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const CommunicationDetailsScreen()),
+    );
+  },
+  child: Text(
+    "Details >",
+    style: TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.bold,
+      color: navyBlue,
+    ),
+  ),
+),
+          ],
+        ),
+        const SizedBox(height: 15),
+        
+        Row(
+          children: [
+            _buildStatCard(
+              title: "Calls",
+              count: "56",
+              icon: Icons.call_rounded,
+            ),
+            const SizedBox(width: 15),
+            _buildStatCard(
+              title: "Messages",
+              count: "109",
+              icon: Icons.chat_bubble_rounded,
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildStatCard({
+  required String title,
+  required String count,
+  required IconData icon,
+}) {
+  return Expanded(
+    child: Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.6), 
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: navyBlue,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Icon(icon, color: navyBlue.withValues(alpha: 0.3), size: 20),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            count,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: navyBlue.withValues(alpha: 0.7),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 }

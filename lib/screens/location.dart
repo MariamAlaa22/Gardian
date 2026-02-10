@@ -34,15 +34,6 @@ class _ChildLocationScreenState extends State<ChildLocationScreen> {
             },
           ),
 
-          Positioned(
-            top: 50,
-            left: 20,
-            child: FloatingActionButton.small(
-              backgroundColor: Colors.white,
-              onPressed: () => Navigator.pop(context),
-              child: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF042459), size: 18),
-            ),
-          ),
 
           _buildInfoCard(),
         ],
