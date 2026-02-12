@@ -60,6 +60,8 @@ dependencies:
   flutter_contacts: ^1.1.9+2
   
   fluttertoast: ^8.2.10
+  
+
 
 dev_dependencies:
   flutter_test:
