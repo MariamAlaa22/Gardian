@@ -5,6 +5,8 @@ import 'package:gardians/screens/sign_in.dart';
 import 'package:gardians/screens/splash.dart';
 import 'package:gardians/screens/welcome.dart';
 import 'package:gardians/screens/dashboard.dart';
+import 'package:gardians/screens/addchild.dart';
+import 'package:gardians/screens/devices.dart';
 import 'package:gardians/utils/shared_prefs_utils.dart';
 import 'package:gardians/services/main_foreground_service.dart'; // ضيفي ده
 import 'test_screen.dart';
@@ -31,6 +33,8 @@ class MyApp extends StatelessWidget {
         "/sign_in": (context) => const SignIn(),
         "/SignUp": (context) => const Signup(),
         "/dashboard": (context) => const ParentDashboard(),
+        '/add_child': (context) => const AddChildScreen(),
+        '/devices': (context) => const DevicesScreen(),
       },
     );
   }

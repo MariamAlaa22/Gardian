@@ -2,24 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 // استيراد الشاشات
-import 'package:gardians/screens/commdetails.dart';
 import 'package:gardians/screens/devices.dart';
-import 'package:gardians/screens/alertsettings.dart';
-import 'package:gardians/screens/alerts.dart';
-import 'package:gardians/screens/location.dart';
-import 'package:gardians/screens/profile.dart';
+import 'package:gardians/screens/usage.dart';
 import 'package:gardians/screens/reports.dart';
 import 'package:gardians/screens/rules.dart';
-import 'package:gardians/screens/usage.dart';
+import 'package:gardians/screens/location.dart';
+import 'package:gardians/screens/alerts.dart';
+import 'package:gardians/screens/profile.dart';
+import 'package:gardians/screens/parent.dart';
+import 'package:gardians/screens/alertsettings.dart';
 
-// 1. حل مشكلة الـ Ambiguous Import باستخدام كلمة 'as'
-import 'package:gardians/screens/parent.dart' as screen;
-import '../models/parent.dart' as model;
-
-// استيراد باقي الـ Utils والموديلات
-import '../models/child.dart';
+// استيراد الـ Utils والموديلات
+import '../utils/shared_prefs_utils.dart';
+import '../utils/constants.dart';
 import '../utils/background_generator.dart';
-import '../utils/account_utils.dart';
+import '../models/parent.dart' as model;
+import '../models/child.dart';
 
 class ParentDashboard extends StatefulWidget {
   const ParentDashboard({super.key});
@@ -35,22 +33,33 @@ class _ParentDashboardState extends State<ParentDashboard> {
 
   int _selectedIndex = 0;
 
-  // 2. تحديث تعريف الموديلات باستخدام الـ Prefix الجديد
-  final model.Parent currentParent = model.Parent(
-    name: "Abdelrahman Amr",
-    email: "abdelrahmanamr.eltawab@gmail.com",
-  );
-
-  final Child selectedChild = Child(
-    name: "Billy's iPhone",
-    email: "billy@safeguard.com",
-  );
-
-  late final List<Widget> _pages;
+  // شلنا late عشان نتفادى الـ LateInitializationError
+  List<Widget> _pages = [];
+  late model.Parent currentParent;
+  late Child selectedChild;
 
   @override
   void initState() {
     super.initState();
+    _loadData();
+    _initializePages();
+  }
+
+  // تحميل البيانات من الـ Shared Preferences
+  void _loadData() {
+    String savedName =
+        SharedPrefsUtils.getString(Constants.name) ?? "Guardian Parent";
+    String savedEmail =
+        SharedPrefsUtils.getString(Constants.email) ?? "parent@safeguard.com";
+    currentParent = model.Parent(name: savedName, email: savedEmail);
+
+    String savedChildName =
+        SharedPrefsUtils.getString(Constants.childName) ?? "Select Child";
+    selectedChild = Child(name: savedChildName, email: "");
+  }
+
+  // بناء القائمة الأساسية للصفحات
+  void _initializePages() {
     _pages = [
       _dashboardBody(),
       const ChildLocationScreen(),
@@ -59,13 +68,34 @@ class _ParentDashboardState extends State<ParentDashboard> {
     ];
   }
 
-  // ... (نفس كود الـ AppBar والـ Drawer اللي فات)
+  // ميثود لتحديث الواجهة عند تغيير الطفل
+  void _refreshChildData() {
+    setState(() {
+      _loadData();
+      _initializePages();
+    });
+  }
+
+  String _getAppBarTitle() {
+    switch (_selectedIndex) {
+      case 0:
+        return "Guardian";
+      case 1:
+        return "Location";
+      case 2:
+        return "Alerts";
+      case 3:
+        return "Profile";
+      default:
+        return "Guardian";
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundGrey,
-      drawer: _buildDrawer(),
+      drawer: _buildDynamicDrawer(),
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 151, 207, 220),
         elevation: 0,
@@ -74,90 +104,102 @@ class _ParentDashboardState extends State<ParentDashboard> {
           style: TextStyle(color: navyBlue, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: Icon(Icons.menu, color: navyBlue),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
       ),
-      body: IndexedStack(index: _selectedIndex, children: _pages),
-      bottomNavigationBar: _buildBottomNav(),
+      body: _pages.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : IndexedStack(index: _selectedIndex, children: _pages),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) => setState(() => _selectedIndex = index),
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
+        iconSize: 28,
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: const Color.fromARGB(255, 47, 152, 168),
+        unselectedItemColor: navyBlue.withOpacity(0.3),
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.grid_view_rounded),
+            label: "",
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.location_pin), label: ""),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.notifications_none),
+            label: "",
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: ""),
+        ],
+      ),
     );
   }
-
-  // 3. حل مشكلة الـ Method undefined: أضفت لك الميثودز اللي كانت ناقصة تحت
 
   Widget _dashboardBody() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          _buildChildSelector(),
+          GestureDetector(
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const DevicesScreen()),
+              );
+              _refreshChildData();
+            },
+            child: _buildChildSelector(),
+          ),
           const SizedBox(height: 20),
-          _buildScreenTimeCard(), // دي اللي كانت عاملة Error
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const AppUsageScreen()),
+            ),
+            child: _buildScreenTimeCard(),
+          ),
           const SizedBox(height: 20),
-          _buildMonitorCard(), // ودي كمان
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const WeeklyReportScreen(),
+              ),
+            ),
+            child: _buildMonitorCard(),
+          ),
           const SizedBox(height: 20),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: _buildBlockedSection()),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AppRulesScreen(),
+                    ),
+                  ),
+                  child: _buildBlockedSection(),
+                ),
+              ),
               const SizedBox(width: 15),
               Expanded(child: _buildUsageSection()),
             ],
           ),
           const SizedBox(height: 20),
-          _buildCommunicationSection(),
         ],
       ),
     );
   }
 
-  // --- الميثودز اللي كانت ناقصة عشان الايرور يروح ---
-
-  Widget _buildScreenTimeCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0x4D9ED7EB),
-        borderRadius: BorderRadius.circular(25),
-      ),
-      child: Column(
-        children: [
-          const Text(
-            "TOTAL SCREEN TIME",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            "4h 12m",
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: navyBlue,
-            ),
-          ),
-          LinearProgressIndicator(
-            value: 0.8,
-            color: navyBlue,
-            backgroundColor: Colors.white,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMonitorCard() {
-    return Container(
-      height: 100,
-      decoration: BoxDecoration(
-        color: skyBlue.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Center(child: Text("AI Content Monitor - Safe")),
-    );
-  }
-
-  // ... (باقي الـ Widgets الفرعية اللي في الكود الأصلي بتاعك زي _buildBlockedSection و _buildUsageSection)
-
-  // تعديل الـ Drawer عشان يستخدم الموديل الصح
-  Widget _buildDrawer() {
+  Widget _buildDynamicDrawer() {
     return Drawer(
+      backgroundColor: Colors.white,
       child: Column(
         children: [
           UserAccountsDrawerHeader(
@@ -168,24 +210,57 @@ class _ParentDashboardState extends State<ParentDashboard> {
               backgroundColor: Colors.white,
               child: Text(
                 BackgroundGenerator.getFirstCharacters(currentParent.name!),
+                style: TextStyle(
+                  color: navyBlue,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-            accountName: Text(currentParent.name!),
+            accountName: Text(
+              currentParent.name!,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
             accountEmail: Text(currentParent.email!),
           ),
-          // ... باقي الـ ListTile
+          _buildDrawerItem(Icons.apps_outage_rounded, "Control Apps", () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const AppRulesScreen()),
+            );
+          }),
+          _buildDrawerItem(Icons.devices_other, "Manage Devices", () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const DevicesScreen()),
+            );
+          }),
+          _buildDrawerItem(Icons.report, "Weekly Reports", () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const WeeklyReportScreen(),
+              ),
+            );
+          }),
+          const Divider(),
+          _buildDrawerItem(Icons.logout, "Logout", () {
+            SharedPrefsUtils.clear();
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const Parent()),
+              (route) => false,
+            );
+          }, isLogout: true),
+          const SizedBox(height: 20),
         ],
       ),
     );
   }
 
-  // الميثودز المساعدة
-  String _getAppBarTitle() {
-    /* ... */
-    return "Guardian";
-  }
-
-  // تحديث الـ Child Selector عشان يظهر حروف اسم الطفل
   Widget _buildChildSelector() {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -196,18 +271,28 @@ class _ParentDashboardState extends State<ParentDashboard> {
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: BackgroundGenerator.getRandomColor(), // لون عشوائي
+            backgroundColor: skyBlue,
             child: Text(
-              BackgroundGenerator.getFirstCharacters(
-                selectedChild.name!,
-              ), // حروف اسم الطفل
+              BackgroundGenerator.getFirstCharacters(selectedChild.name!),
               style: const TextStyle(color: Colors.white, fontSize: 12),
             ),
           ),
           const SizedBox(width: 12),
-          Text(
-            selectedChild.name!,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "SELECTED CHILD",
+                style: TextStyle(
+                  fontSize: 10,
+                  color: navyBlue.withOpacity(0.5),
+                ),
+              ),
+              Text(
+                selectedChild.name!,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
           ),
           const Spacer(),
           Icon(Icons.unfold_more, color: navyBlue),
@@ -216,52 +301,305 @@ class _ParentDashboardState extends State<ParentDashboard> {
     );
   }
 
+  Widget _buildMonitorCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0x4D9ED7EB),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "AI Content Monitor",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: navyBlue,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  "Safe",
+                  style: TextStyle(color: Colors.green, fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 150,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                PieChart(
+                  PieChartData(
+                    sectionsSpace: 2,
+                    centerSpaceRadius: 50,
+                    sections: [
+                      PieChartSectionData(
+                        color: Colors.green,
+                        value: 60,
+                        radius: 18,
+                        showTitle: false,
+                      ),
+                      PieChartSectionData(
+                        color: Colors.blue,
+                        value: 34,
+                        radius: 18,
+                        showTitle: false,
+                      ),
+                      PieChartSectionData(
+                        color: Colors.red,
+                        value: 3,
+                        radius: 18,
+                        showTitle: false,
+                      ),
+                      PieChartSectionData(
+                        color: Colors.orange,
+                        value: 3,
+                        radius: 18,
+                        showTitle: false,
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "94%",
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: navyBlue,
+                      ),
+                    ),
+                    Text(
+                      "SAFE",
+                      style: TextStyle(
+                        color: navyBlue.withOpacity(0.6),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            "Tap for detailed weekly analysis",
+            style: TextStyle(fontSize: 10, color: navyBlue.withOpacity(0.4)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBlockedSection() {
-    return Container();
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: const Color(0x4D9ED7EB),
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "BLOCKED",
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: navyBlue,
+                ),
+              ),
+              const Icon(
+                Icons.settings,
+                size: 16,
+                color: Color.fromARGB(255, 47, 152, 168),
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
+          _appBlockedItem("WhatsApp"),
+          _appBlockedItem("TikTok"),
+          Center(
+            child: Text(
+              "Manage Rules",
+              style: TextStyle(fontSize: 10, color: navyBlue.withOpacity(0.5)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _appBlockedItem(String name) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Container(
+            height: 25,
+            width: 25,
+            decoration: BoxDecoration(
+              color: navyBlue.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            name,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: navyBlue,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildUsageSection() {
-    return Container();
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const AppUsageScreen()),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: const Color(0x4D9ED7EB),
+          borderRadius: BorderRadius.circular(25),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "USAGE",
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: navyBlue,
+              ),
+            ),
+            const SizedBox(height: 15),
+            _usageItem("YouTube", 0.7, Colors.brown),
+            _usageItem("Roblox", 0.4, Colors.yellow),
+            const SizedBox(height: 5),
+            Center(
+              child: Text(
+                "Full Stats",
+                style: TextStyle(
+                  fontSize: 10,
+                  color: navyBlue.withOpacity(0.5),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  Widget _buildCommunicationSection() {
-    return Container();
+  Widget _usageItem(String name, double progress, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            name,
+            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          LinearProgressIndicator(
+            value: progress,
+            backgroundColor: Colors.grey[100],
+            color: color,
+            minHeight: 3,
+          ),
+        ],
+      ),
+    );
   }
 
-  // تحديث الـ Bottom Nav عشان ميعملش Crash
-  Widget _buildBottomNav() {
-    return BottomNavigationBar(
-      currentIndex: _selectedIndex,
-      onTap: (index) => setState(() => _selectedIndex = index),
-      selectedItemColor: const Color.fromARGB(255, 47, 152, 168),
-      unselectedItemColor: navyBlue.withOpacity(0.3),
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.grid_view_rounded),
-          label: "Home",
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.location_pin),
-          label: "Location",
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.notifications_none),
-          label: "Alerts",
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          label: "Profile",
-        ),
-      ],
+  Widget _buildScreenTimeCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0x4D9ED7EB),
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "TOTAL SCREEN TIME",
+            style: TextStyle(
+              fontSize: 12,
+              color: navyBlue.withOpacity(0.5),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            "4h 12m",
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: navyBlue,
+            ),
+          ),
+          Text(
+            "of 5h limit",
+            style: TextStyle(color: navyBlue.withOpacity(0.5)),
+          ),
+          const SizedBox(height: 15),
+          LinearProgressIndicator(
+            value: 0.84,
+            minHeight: 8,
+            color: navyBlue,
+            backgroundColor: Colors.grey[100],
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildDrawerItem(
-    IconData i,
-    String t,
-    VoidCallback o, {
+    IconData icon,
+    String title,
+    VoidCallback onTap, {
     bool isLogout = false,
   }) {
-    return ListTile();
+    return ListTile(
+      leading: Icon(icon, color: isLogout ? Colors.red : navyBlue),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: isLogout ? Colors.red : navyBlue,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      onTap: onTap,
+    );
   }
 }

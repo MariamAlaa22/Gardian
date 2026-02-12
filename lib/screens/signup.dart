@@ -46,6 +46,7 @@ class _SignupState extends State<Signup> {
           Constants.email,
           _emailController.text,
         );
+        await SharedPrefsUtils.setString(Constants.name, _nameController.text);
 
         // هنا مستقبلاً هننده على AccountUtils لإنشاء الحساب في Firebase
 
