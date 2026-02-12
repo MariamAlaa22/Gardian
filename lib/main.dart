@@ -4,7 +4,12 @@ import 'package:gardians/screens/sign_in.dart';
 import 'package:gardians/screens/splash.dart';
 import 'package:gardians/screens/welcome.dart';
 void main() {
-  runApp(const MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  await SharedPrefsUtils.init();
+  runApp(const MaterialApp(
+    debugShowCheckedModeBanner: false, // عشان نشيل العلامة الحمراء اللي فوق
+    home: TestScreen(), 
+  ));
 }
 
 class MyApp extends StatelessWidget {
