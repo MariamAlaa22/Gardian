@@ -34,6 +34,9 @@ dependencies:
   pinput: ^5.0.0
   fl_chart: ^0.70.0
   google_maps_flutter: ^2.5.3
+  firebase_auth: ^4.16.0        # عشان نعرف مين المستخدم (الطفل)
+  firebase_database: ^10.4.0    # عشان نرفع البيانات للداتابيز
+  device_apps: ^2.2.0           # عشان نجيب قائمة التطبيقات من الموبايل
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
