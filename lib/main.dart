@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart'; // ضيفي ده
 import 'package:gardians/screens/Signup.dart';
 import 'package:gardians/screens/sign_in.dart';
 import 'package:gardians/screens/splash.dart';
 import 'package:gardians/screens/welcome.dart';
 import 'package:gardians/screens/dashboard.dart';
 import 'package:gardians/utils/shared_prefs_utils.dart';
+import 'package:gardians/services/main_foreground_service.dart'; // ضيفي ده
 import 'test_screen.dart';
 
 void main() async {
@@ -14,6 +16,7 @@ void main() async {
   runApp(const MyApp());
 }
 
+// الكلاس ده هتحتاجيه لما تنقلي الـ Routes للشغل الحقيقي
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 

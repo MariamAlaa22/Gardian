@@ -41,8 +41,6 @@ dependencies:
   pinput: ^5.0.0
   fl_chart: ^0.70.0
   google_maps_flutter: ^2.5.3
-  # firebase_auth: ^4.16.0        # عشان نعرف مين المستخدم (الطفل)
-  # firebase_database: ^10.4.0    # عشان نرفع البيانات للداتابيز
   installed_apps: ^1.0.1 # عشان نجيب قائمة التطبيقات من الموبايل
 
   # The following adds the Cupertino Icons font to your application.
@@ -50,6 +48,18 @@ dependencies:
   cupertino_icons: ^1.0.8
   animated_splash_screen:
   provider: ^6.1.5+1
+  # --- مكتبات الـ Services اللي ضفناها ---
+  
+  # لتشغيل الخدمة في الخلفية 24 ساعة
+  flutter_background_service: ^5.0.5
+  
+  # لمراقبة التطبيق اللي شغال حالياً (الـ Locker)
+  usage_stats: ^1.1.0
+  
+  # للوصول لأسماء الموبايل (Contacts)
+  flutter_contacts: ^1.1.9+2
+  
+  fluttertoast: ^8.2.10
 
 dev_dependencies:
   flutter_test:
