@@ -12,76 +12,94 @@ class ChildHomeScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          //   (Header)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.only(top: 60, bottom: 30, left: 25, right: 25),
+            padding: const EdgeInsets.only(top: 80, bottom: 40, left: 25, right: 25),
             decoration: BoxDecoration(
               color: navyBlue,
               borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(40),
-                bottomRight: Radius.circular(40),
+                bottomLeft: Radius.circular(50),
+                bottomRight: Radius.circular(50),
               ),
             ),
             child: Column(
               children: [
-                const CircleAvatar(
-                  radius: 45,
-                  backgroundColor: Colors.white24,
-                  child: Icon(Icons.child_care, size: 50, color: Colors.white),
+                CircleAvatar(
+                  radius: 50,
+                  backgroundColor: Colors.white.withValues(alpha:0.1),
+                  child: const Icon(Icons.videogame_asset, size: 50, color: Colors.white),
                 ),
-                const SizedBox(height: 15),
+                const SizedBox(height: 20),
                 const Text(
                   "Hello, Hero! 🛡️",
-                  style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 5),
-                Text(
-                  "Your device is safely connected",
-                  style: TextStyle(color: skyBlue, fontSize: 14),
-                ),
+                const SizedBox(height: 8),
+                
               ],
             ),
           ),
 
-          const SizedBox(height: 40),
+          const Spacer(flex: 1), 
 
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 25),
+            child: Container(
+              padding: const EdgeInsets.all(25),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha:0.05), 
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(color: Colors.green.withValues(alpha:0.2), width: 2),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha:0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.security_rounded, color: Colors.green, size: 30),
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Active Protection",
+                          style: TextStyle(color: navyBlue, fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          "Gardian is keeping your device safe in the background.",
+                          style: TextStyle(color: navyBlue.withValues(alpha:0.6), fontSize: 13, height: 1.4),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const Spacer(flex: 2),
+
+          Opacity(
+            opacity: 0.5,
             child: Column(
               children: [
-
-                const SizedBox(height: 40),
-
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.security, color: navyBlue, size: 30),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: Text(
-                          "Gardian is working in the background to keep you safe.",
-                          style: TextStyle(color: navyBlue.withValues(alpha: 0.7), fontSize: 14),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                Icon(Icons.extension_rounded, size: 40, color: navyBlue),
+                const SizedBox(height: 10),
+                const Text("Gardian Game Coming Soon", 
+                  style: TextStyle(fontStyle: FontStyle.italic)),
               ],
             ),
           ),
-                  
-        
-          const SizedBox(height: 30),
+          
+          const SizedBox(height: 50),
         ],
       ),
     );
   }
-
 }
