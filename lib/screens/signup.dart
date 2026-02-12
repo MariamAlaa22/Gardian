@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gardians/screens/dashboard.dart';
+import 'package:gardians/screens/sign_in.dart';
 // استيراد الملفات اللي حولناها
 import '../utils/validators.dart';
 import '../utils/shared_prefs_utils.dart';
@@ -52,7 +53,7 @@ class _SignupState extends State<Signup> {
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const ParentDashboard()),
+          MaterialPageRoute(builder: (context) => const SignIn()),
         );
       } catch (e) {
         ScaffoldMessenger.of(
