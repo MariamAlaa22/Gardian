@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:gardians/screens/dashboard.dart';
+// استيراد الملفات اللي حولناها
+import '../utils/validators.dart';
+import '../utils/shared_prefs_utils.dart';
+import '../utils/constants.dart';
 
 class Signup extends StatefulWidget {
   const Signup({super.key});
@@ -16,10 +20,7 @@ class _SignupState extends State<Signup> {
   final TextEditingController _confirmController = TextEditingController();
 
   final Color navyBlue = const Color(0xFF042459);
-  final Color skyBlue = const Color(0xFF9ED7EB);
-
   bool _isLoading = false;
-
   bool _obscureText = true;
   bool _obscureConfirmText = true;
 
@@ -32,6 +33,38 @@ class _SignupState extends State<Signup> {
     super.dispose();
   }
 
+  // وظيفة إنشاء الحساب
+  Future<void> _handleSignup() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() => _isLoading = true);
+
+      try {
+        // 1. حفظ البيانات في SharedPrefs (كأننا سجلنا المستخدم محلياً)
+        await SharedPrefsUtils.setBool(Constants.autoLogin, true);
+        await SharedPrefsUtils.setString(
+          Constants.email,
+          _emailController.text,
+        );
+
+        // هنا مستقبلاً هننده على AccountUtils لإنشاء الحساب في Firebase
+
+        if (!mounted) return;
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const ParentDashboard()),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  // الـ buildMyField كما هي في كودك
   Widget buildMyField({
     required String label,
     required IconData icon,
@@ -96,6 +129,7 @@ class _SignupState extends State<Signup> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // Headers
                   SizedBox(
                     width: 266,
                     child: Column(
@@ -120,29 +154,29 @@ class _SignupState extends State<Signup> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 35),
 
+                  // Username field
                   buildMyField(
                     label: "Username",
                     icon: Icons.person_outline,
                     myController: _nameController,
-                    validator: (value) => (value == null || value.isEmpty)
-                        ? "Name is required"
+                    validator: (value) => !Validators.isValidName(value ?? "")
+                        ? "Name is required (max 15 chars)"
                         : null,
                   ),
+
+                  // Email field
                   buildMyField(
                     label: "Email",
                     icon: Icons.email_outlined,
                     myController: _emailController,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return "Email is required";
-                      }
-                      if (!value.contains('@')) return "Invalid email format";
-                      return null;
-                    },
+                    validator: (value) => !Validators.isValidEmail(value ?? "")
+                        ? "Invalid email format"
+                        : null,
                   ),
+
+                  // Password field
                   buildMyField(
                     label: "Password",
                     icon: Icons.lock_outline,
@@ -151,10 +185,13 @@ class _SignupState extends State<Signup> {
                     isObscured: _obscureText,
                     onToggle: () =>
                         setState(() => _obscureText = !_obscureText),
-                    validator: (value) => (value != null && value.length < 6)
+                    validator: (value) =>
+                        !Validators.isValidPassword(value ?? "")
                         ? "At least 6 characters"
                         : null,
                   ),
+
+                  // Confirm Password field
                   buildMyField(
                     label: "Confirm Password",
                     icon: Icons.shield_outlined,
@@ -165,15 +202,10 @@ class _SignupState extends State<Signup> {
                       () => _obscureConfirmText = !_obscureConfirmText,
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return "Please confirm your password";
-                      }
-                      if (value.length < 6) {
-                        return "Must be at least 6 characters";
-                      }
-                      if (value != _passController.text) {
+                      if (value == null || value.isEmpty)
+                        return "Please confirm password";
+                      if (value != _passController.text)
                         return "Passwords don't match";
-                      }
                       return null;
                     },
                   ),
@@ -181,35 +213,18 @@ class _SignupState extends State<Signup> {
                   const SizedBox(height: 30),
 
                   ElevatedButton(
+                    onPressed: _isLoading ? null : _handleSignup,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: navyBlue,
-                      disabledBackgroundColor: navyBlue.withValues(alpha: 0.7),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 100,
                         vertical: 15,
                       ),
-                      elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(50),
                       ),
                     ),
-                    onPressed: _isLoading
-                        ? null
-                        : () async {
-                            if (_formKey.currentState!.validate()) {
-                              setState(() => _isLoading = true);
-                              await Future.delayed(const Duration(seconds: 2));
-                              if (!context.mounted) return;
-                              setState(() => _isLoading = false);
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const ParentDashboard(),
-                                ),
-                              );
-                            }
-                          },
                     child: _isLoading
                         ? const SizedBox(
                             height: 20,

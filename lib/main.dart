@@ -3,19 +3,15 @@ import 'package:gardians/screens/Signup.dart';
 import 'package:gardians/screens/sign_in.dart';
 import 'package:gardians/screens/splash.dart';
 import 'package:gardians/screens/welcome.dart';
+import 'package:gardians/screens/dashboard.dart';
 import 'package:gardians/utils/shared_prefs_utils.dart';
 import 'test_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SharedPrefsUtils.init().then((_) {
-    runApp(
-      const MaterialApp(
-        debugShowCheckedModeBanner: false, // عشان نشيل العلامة الحمراء اللي فوق
-        home: TestScreen(),
-      ),
-    );
-  });
+  await SharedPrefsUtils.init(); // لازم دي عشان الـ Signup تحفظ البيانات صح
+
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -31,6 +27,7 @@ class MyApp extends StatelessWidget {
         "/welcome": (context) => const Welcome(),
         "/sign_in": (context) => const SignIn(),
         "/SignUp": (context) => const Signup(),
+        "/dashboard": (context) => const ParentDashboard(),
       },
     );
   }
