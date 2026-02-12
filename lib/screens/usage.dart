@@ -1,11 +1,54 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'rules.dart'; // عشان نربط زرار الـ Limit
 
-class AppUsageScreen extends StatelessWidget {
+class AppUsageScreen extends StatefulWidget {
   const AppUsageScreen({super.key});
 
+  @override
+  State<AppUsageScreen> createState() => _AppUsageScreenState();
+}
+
+class _AppUsageScreenState extends State<AppUsageScreen> {
   final Color navyBlue = const Color(0xFF042459);
   final Color skyBlue = const Color(0xFF9ED7EB);
+
+  // 1. قائمة التطبيقات (Dynamic List)
+  // ملاحظة: الـ value هنا هي النسبة المئوية للرسم البياني
+  final List<Map<String, dynamic>> mostUsedApps = [
+    {
+      "name": "TikTok",
+      "time": "2h 15m",
+      "cat": "Social",
+      "icon": Icons.tiktok,
+      "color": Colors.black,
+      "perc": 40.0,
+    },
+    {
+      "name": "Roblox",
+      "time": "1h 45m",
+      "cat": "Games",
+      "icon": Icons.gamepad,
+      "color": Colors.blueAccent,
+      "perc": 30.0,
+    },
+    {
+      "name": "Duolingo",
+      "time": "52m",
+      "cat": "Education",
+      "icon": Icons.language,
+      "color": Colors.green,
+      "perc": 15.0,
+    },
+    {
+      "name": "Instagram",
+      "time": "45m",
+      "cat": "Social",
+      "icon": Icons.camera_alt,
+      "color": Colors.pink,
+      "perc": 15.0,
+    },
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -23,18 +66,13 @@ class AppUsageScreen extends StatelessWidget {
           style: TextStyle(color: navyBlue, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.calendar_month_outlined, color: navyBlue),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            _buildTotalUsageChart(),
+            // الرسم البياني اللي بيقرأ من الـ List أوتوماتيكياً
+            _buildDynamicUsageChart(),
 
             const SizedBox(height: 30),
 
@@ -49,39 +87,21 @@ class AppUsageScreen extends StatelessWidget {
                     color: navyBlue,
                   ),
                 ),
-                TextButton(onPressed: () {}, child: const Text("See All")),
+                TextButton(onPressed: () {}, child: const Text("View Details")),
               ],
             ),
 
             const SizedBox(height: 10),
 
-            _buildAppItem(
-              "TikTok",
-              "2h 15m",
-              "Social",
-              Icons.tiktok,
-              Colors.black,
-            ),
-            _buildAppItem(
-              "Roblox",
-              "1h 45m",
-              "Games",
-              Icons.gamepad,
-              Colors.blue,
-            ),
-            _buildAppItem(
-              "Duolingo",
-              "52m",
-              "Education",
-              Icons.language,
-              Colors.green,
-            ),
-            _buildAppItem(
-              "Instagram",
-              "45m",
-              "Social",
-              Icons.camera_alt,
-              Colors.pink,
+            // عرض التطبيقات بشكل ديناميكي
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: mostUsedApps.length,
+              itemBuilder: (context, index) {
+                final app = mostUsedApps[index];
+                return _buildAppItem(app, index);
+              },
             ),
           ],
         ),
@@ -89,51 +109,41 @@ class AppUsageScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTotalUsageChart() {
+  // ميثود ذكية لبناء الـ Chart بناءً على الداتا
+  Widget _buildDynamicUsageChart() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0F9FF),
-        borderRadius: BorderRadius.circular(30),
+        color: skyBlue.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(35),
       ),
       child: Column(
         children: [
           SizedBox(
-            height: 200,
+            height: 220,
             child: Stack(
               alignment: Alignment.center,
               children: [
                 PieChart(
                   PieChartData(
-                    sectionsSpace: 5,
-                    centerSpaceRadius: 70,
-                    sections: [
-                      PieChartSectionData(
-                        color: skyBlue,
-                        value: 40,
-                        radius: 15,
+                    sectionsSpace: 4,
+                    centerSpaceRadius: 75,
+                    // تحويل الـ List لـ Chart Sections برمجياً
+                    sections: mostUsedApps.map((app) {
+                      return PieChartSectionData(
+                        color: app["color"],
+                        value: app["perc"],
+                        radius: 18,
                         showTitle: false,
-                      ),
-                      PieChartSectionData(
-                        color: Colors.blueAccent,
-                        value: 35,
-                        radius: 15,
-                        showTitle: false,
-                      ),
-                      PieChartSectionData(
-                        color: navyBlue,
-                        value: 25,
-                        radius: 15,
-                        showTitle: false,
-                      ),
-                    ],
+                      );
+                    }).toList(),
                   ),
                 ),
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      "6h 42m",
+                      "5h 37m",
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -141,9 +151,11 @@ class AppUsageScreen extends StatelessWidget {
                       ),
                     ),
                     const Text(
-                      "TODAY",
+                      "SCREEN TIME",
                       style: TextStyle(
                         color: Colors.grey,
+                        letterSpacing: 1.2,
+                        fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -152,93 +164,102 @@ class AppUsageScreen extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _chartLegend(skyBlue, "Games", "2h 15m"),
-              _chartLegend(Colors.blueAccent, "Social", "3h 22m"),
-              _chartLegend(navyBlue, "Edu", "1h 05m"),
-            ],
+          const SizedBox(height: 25),
+          // الـ Legend اللي بيطلع تحت الشارت أوتوماتيكياً
+          Wrap(
+            spacing: 20,
+            runSpacing: 10,
+            alignment: WrapAlignment.center,
+            children: mostUsedApps
+                .map((app) => _chartLegend(app["color"], app["cat"]))
+                .toList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _chartLegend(Color color, String label, String time) {
-    return Column(
+  Widget _chartLegend(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          children: [
-            CircleAvatar(radius: 5, backgroundColor: color),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-            ),
-          ],
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
-        Text(time, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+        ),
       ],
     );
   }
 
-  Widget _buildAppItem(
-    String name,
-    String time,
-    String cat,
-    IconData icon,
-    Color iconCol,
-  ) {
+  Widget _buildAppItem(Map<String, dynamic> app, int index) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade100),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: Colors.grey.shade50),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: iconCol.withValues(alpha: 0.1),
+              color: app["color"].withOpacity(0.1),
               borderRadius: BorderRadius.circular(15),
             ),
-            child: Icon(icon, color: iconCol),
+            child: Icon(app["icon"], color: app["color"]),
           ),
           const SizedBox(width: 15),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                name,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  app["name"],
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
-              ),
-              Text(
-                "$time • $cat",
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-            ],
+                Text(
+                  "${app["time"]} • ${app["cat"]}",
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                ),
+              ],
+            ),
           ),
-          const Spacer(),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: navyBlue,
               foregroundColor: Colors.white,
-              elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 15),
+              elevation: 0,
             ),
-            onPressed: () {},
-            child: const Text("Limit", style: TextStyle(fontSize: 12)),
+            onPressed: () {
+              // ربط زرار الـ Limit بصفحة القواعد
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AppRulesScreen()),
+              );
+            },
+            child: const Text("Set Limit", style: TextStyle(fontSize: 11)),
           ),
         ],
       ),
