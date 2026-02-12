@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gardians/screens/permission.dart';
 import 'package:pinput/pinput.dart';
-import 'dart:async'; 
+import 'dart:async';
 
 class OTPScreen extends StatefulWidget {
   const OTPScreen({super.key});
@@ -14,16 +14,20 @@ class _OTPScreenState extends State<OTPScreen> {
   final TextEditingController _otpController = TextEditingController();
   int _seconds = 30;
   late Timer _timer;
+  bool _isLoading = false; 
 
   final Color skyBlue = const Color(0xFF9ED7EB);
   final Color navyBlue = const Color(0xFF042459);
 
   void startTimer() {
+    _seconds = 30; 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_seconds > 0) {
-        setState(() {
-          _seconds--;
-        });
+        if (mounted) {
+          setState(() {
+            _seconds--;
+          });
+        }
       } else {
         _timer.cancel();
       }
@@ -33,12 +37,12 @@ class _OTPScreenState extends State<OTPScreen> {
   @override
   void initState() {
     super.initState();
-    startTimer(); 
+    startTimer();
   }
 
   @override
   void dispose() {
-    _timer.cancel(); 
+    _timer.cancel();
     _otpController.dispose();
     super.dispose();
   }
@@ -50,7 +54,7 @@ class _OTPScreenState extends State<OTPScreen> {
       height: 60,
       textStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
       decoration: BoxDecoration(
-        color: const Color(0x4D9ED7EB), 
+        color: const Color(0x4D9ED7EB),
         borderRadius: BorderRadius.circular(15),
       ),
     );
@@ -69,7 +73,7 @@ class _OTPScreenState extends State<OTPScreen> {
             margin: const EdgeInsets.only(right: 20, top: 12, bottom: 12),
             padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
-              color: skyBlue.withValues(alpha: 0.3),
+              color: skyBlue.withValues(alpha:0.3),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
@@ -78,7 +82,9 @@ class _OTPScreenState extends State<OTPScreen> {
                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                   children: [
                     TextSpan(text: "1", style: TextStyle(color: navyBlue)),
-                    TextSpan(text: " / 2", style: TextStyle(color: navyBlue.withValues(alpha: 0.5))),
+                    TextSpan(
+                        text: " / 2",
+                        style: TextStyle(color: navyBlue.withValues(alpha:0.5))),
                   ],
                 ),
               ),
@@ -98,19 +104,21 @@ class _OTPScreenState extends State<OTPScreen> {
                 children: [
                   Text(
                     "Verification",
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: navyBlue),
+                    style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: navyBlue),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     "Enter the code sent to your email",
-                    style: TextStyle(color: navyBlue.withValues(alpha: 0.5), fontSize: 14),
+                    style: TextStyle(
+                        color: navyBlue.withValues(alpha:0.5), fontSize: 14),
                   ),
                 ],
               ),
             ),
-
             const SizedBox(height: 30),
-
             Text(
               "00:${_seconds.toString().padLeft(2, '0')}",
               style: TextStyle(
@@ -119,71 +127,112 @@ class _OTPScreenState extends State<OTPScreen> {
                 color: _seconds < 10 ? Colors.red : const Color(0xFF5AB9D9),
               ),
             ),
-
             const SizedBox(height: 15),
-
             Pinput(
               length: 4,
               controller: _otpController,
               defaultPinTheme: defaultPinTheme,
+              onChanged: (value) => setState(() {}),
               focusedPinTheme: defaultPinTheme.copyWith(
                 decoration: defaultPinTheme.decoration!.copyWith(
                   border: Border.all(color: const Color(0xFF9ED7EB), width: 2),
                 ),
               ),
             ),
-
             const SizedBox(height: 40),
-
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: navyBlue,
+                disabledBackgroundColor: navyBlue.withValues(alpha:0.6),
                 padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 15),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(50)),
               ),
-              onPressed: () {
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Row(
-                      children: [
-                        Icon(Icons.check_circle, color: Colors.white, size: 20),
-                        SizedBox(width: 10),
-                        Text("Paired Successfully!", style: TextStyle(fontWeight: FontWeight.bold)),
-                      ],
+              onPressed: (_isLoading || _otpController.text.length < 4)
+                  ? null
+                  : () async {
+                      setState(() => _isLoading = true);
+
+                      await Future.delayed(const Duration(seconds: 2));
+
+                      if (!context.mounted) return;
+
+                      if (_otpController.text == "1234") {
+                        setState(() => _isLoading = false);
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Row(
+                              children: [
+                                Icon(Icons.check_circle,
+                                    color: Colors.white, size: 20),
+                                SizedBox(width: 10),
+                                Text("Paired Successfully!",
+                                    style: TextStyle(fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                            backgroundColor: Colors.green.shade600,
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                            margin: const EdgeInsets.only(
+                                bottom: 20, left: 20, right: 20),
+                          ),
+                        );
+
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const ParentGrantPermissions()),
+                        );
+                      } else {
+                        setState(() => _isLoading = false);
+                        _otpController.clear();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Invalid Code! Try 1234"),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      "Verify",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, color: Colors.white),
                     ),
-                    backgroundColor: Colors.green.shade600,
-                    behavior: SnackBarBehavior.floating,
-                    duration: const Duration(seconds: 2),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    margin: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
-                  ),
-                );
-
-                
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ParentGrantPermissions()),
-                );
-              },
-              child: const Text("Verify", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
             ),
-
             const SizedBox(height: 25),
-
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text("Didn't receive code? ", style: TextStyle(color: navyBlue.withValues(alpha: 0.5))),
+                Text("Didn't receive code? ",
+                    style: TextStyle(color: navyBlue.withValues(alpha:0.5))),
                 GestureDetector(
-                  onTap: _seconds == 0 ? () {
-                    setState(() { _seconds = 30; });
-                    startTimer();
-                  } : null,
+                  onTap: _seconds == 0
+                      ? () {
+                          setState(() {
+                            _otpController.clear();  
+                            startTimer(); 
+                          });
+                        }
+                      : null,
                   child: Text(
                     "Resend",
                     style: TextStyle(
-                      color: _seconds == 0 ? const Color(0xFF5AB9D9) : navyBlue.withValues(alpha: 0.5),
+                      color: _seconds == 0
+                          ? const Color(0xFF5AB9D9)
+                          : navyBlue.withValues(alpha: 0.5),
                       fontWeight: FontWeight.bold,
                       decoration: TextDecoration.underline,
                     ),
