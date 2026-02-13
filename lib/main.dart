@@ -12,11 +12,16 @@ import 'package:gardians/screens/addchild.dart';
 import 'package:gardians/screens/devices.dart';
 import 'package:gardians/utils/shared_prefs_utils.dart';
 import 'package:gardians/services/main_foreground_service.dart'; // ضيفي ده
-import 'test_screen.dart';
+import 'package:gardians/screens/otp.dart'; // تأكد من المسار الصحيح
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await SharedPrefsUtils.init();
+
+  // تجهيز الخدمة للعمل
+  await MainForegroundService.initializeService();
+
   runApp(const MyApp());
 }
 
@@ -44,12 +49,14 @@ class _MyAppState extends State<MyApp> {
         // الرفع للـ Firebase بأمان من كود الـ Dart
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {
-          DatabaseReference ref = FirebaseDatabase.instance.ref("users/childs/${user.uid}/messages");
+          DatabaseReference ref = FirebaseDatabase.instance.ref(
+            "users/childs/${user.uid}/messages",
+          );
           await ref.push().set({
             "senderPhoneNumber": sender,
             "messageBody": body,
             "timeReceived": DateTime.now().toString(),
-            "contactName": "Unknown"
+            "contactName": "Unknown",
           });
         }
       }
@@ -60,7 +67,7 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      initialRoute: "/",
+      initialRoute: "/otp",
       routes: {
         "/": (context) => const Splash(),
         "/welcome": (context) => const Welcome(),
@@ -69,6 +76,7 @@ class _MyAppState extends State<MyApp> {
         "/dashboard": (context) => const ParentDashboard(),
         '/add_child': (context) => const AddChildScreen(),
         '/devices': (context) => const DevicesScreen(),
+        '/otp': (context) => const OTPScreen(),
       },
     );
   }

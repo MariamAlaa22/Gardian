@@ -1,66 +1,46 @@
-import 'package:installed_apps/installed_apps.dart';
-import 'package:installed_apps/app_info.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:usage_stats/usage_stats.dart';
 import 'package:firebase_database/firebase_database.dart';
-import '../models/app.dart';
 
 class UploadAppsService {
-  final _dbRef = FirebaseDatabase.instance.ref("users/childs");
-  final _auth = FirebaseAuth.instance;
-
-  Future<void> syncApps() async {
+  static Future<void> uploadInstalledApps(String childUid) async {
     try {
-      final User? user = _auth.currentUser;
-      if (user == null || user.email == null) return;
+      DateTime end = DateTime.now();
+      DateTime start = end.subtract(const Duration(days: 7));
+      List<UsageInfo> usageStats = await UsageStats.queryUsageStats(start, end);
 
-      // 1. جلب قائمة التطبيقات (v1.0.1 بترجع List<AppInfo> غير قابلة للـ null)
-      List<AppInfo> deviceApps = await InstalledApps.getInstalledApps();
-      
-      // 2. الفلترة النظيفة (بدل builtIn وبدون تشيك null ملوش لازمة)
-      deviceApps.removeWhere((app) => 
-        app.packageName.contains("com.google") || 
-        app.packageName == "com.android.chrome" ||
-        app.packageName.startsWith("com.android.systemui")
-      );
+      Map<String, dynamic> appsMap = {};
+      for (var usage in usageStats) {
+        String pkg = usage.packageName ?? "";
 
-      // 3. جلب البيانات من Firebase للمزامنة
-      final snapshot = await _dbRef.orderByChild("email").equalTo(user.email).get();
+        // الفلتر الذكي: استبعاد أي حاجة تبع أندرويد أو جوجل سيستم أو واجهة الجهاز
+        bool isSystem =
+            pkg.contains("com.android") ||
+            pkg.contains("android") ||
+            pkg.contains("com.sec.android") || // لجهزة سامسونج
+            pkg.contains("com.miui"); // لأجهزة شاومي
 
-      if (snapshot.exists) {
-        final childKey = snapshot.children.first.key;
-        final childData = snapshot.children.first.value as Map<dynamic, dynamic>;
-        
-        List<App> onlineApps = [];
-        if (childData['apps'] != null) {
-          var appsListFromDb = childData['apps'] as List<dynamic>;
-          onlineApps = appsListFromDb.map((e) => App.fromMap(Map<String, dynamic>.from(e))).toList();
+        if (pkg.isNotEmpty && !isSystem) {
+          String packageKey = pkg.replaceAll('.', '_');
+
+          // تحسين اسم التطبيق: بناخد آخر جزء ونخليه Capitalize
+          String rawName = pkg.split('.').last;
+          String formattedName =
+              rawName[0].toUpperCase() + rawName.substring(1);
+
+          appsMap[packageKey] = {
+            "app_name": formattedName,
+            "package_name": pkg,
+            "is_blocked": false,
+          };
         }
-
-        List<Map<String, dynamic>> finalAppsToUpload = [];
-
-        for (var dApp in deviceApps) {
-          // البحث عن التطبيق أونلاين للحفاظ على حالة الـ blocked
-          App existingApp = onlineApps.firstWhere(
-            (oApp) => oApp.packageName == dApp.packageName,
-            orElse: () => App(appName: dApp.name, packageName: dApp.packageName, blocked: false)
-          );
-
-          App syncApp = App(
-            appName: dApp.name,
-            packageName: dApp.packageName,
-            blocked: existingApp.blocked,
-            screenLock: existingApp.screenLock,
-          );
-
-          finalAppsToUpload.add(syncApp.toMap());
-        }
-
-        // 4. الرفع النهائي
-        await _dbRef.child(childKey!).child("apps").set(finalAppsToUpload);
-        // تم استبدال print بـ log أو حذفها لراحة العين في الـ Console
       }
+
+      await FirebaseDatabase.instance
+          .ref("devices_data/$childUid/installed_apps")
+          .set(appsMap);
+      print("✅ [Service] Clean Apps List Synced!");
     } catch (e) {
-      // خطأ بسيط في حالة الفشل
+      print("❌ [Service] Sync Apps Error: $e");
     }
   }
 }

@@ -52,17 +52,18 @@ dependencies:
   # --- مكتبات الـ Services اللي ضفناها ---
 
   # لتشغيل الخدمة في الخلفية 24 ساعة
-  flutter_background_service: ^5.0.5
+  flutter_background_service: ^5.1.0
 
   # لمراقبة التطبيق اللي شغال حالياً (الـ Locker)
-  usage_stats: ^1.1.0
+  usage_stats: ^1.3.1
 
   # للوصول لأسماء الموبايل (Contacts)
   flutter_contacts: ^1.1.9+2
 
   fluttertoast: ^8.2.10
-  
-
+  permission_handler: ^12.0.1
+  battery_plus: ^7.0.0
+  flutter_local_notifications: ^20.1.0
 
 dev_dependencies:
   flutter_test:

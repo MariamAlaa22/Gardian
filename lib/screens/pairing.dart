@@ -1,8 +1,12 @@
+import 'dart:async'; // نحتاجه للاستماع للداتابيز
 import 'package:flutter/material.dart';
-import 'dart:math'; // 1. استيراد مكتبة الحساب لتوليد كود عشوائي
+import 'package:firebase_database/firebase_database.dart';
 
 class PairingCodeScreen extends StatefulWidget {
-  const PairingCodeScreen({super.key});
+  // 1. استلام الكود من شاشة الـ AddChildScreen
+  final String pairingCode;
+
+  const PairingCodeScreen({super.key, required this.pairingCode});
 
   @override
   State<PairingCodeScreen> createState() => _PairingCodeScreenState();
@@ -10,28 +14,66 @@ class PairingCodeScreen extends StatefulWidget {
 
 class _PairingCodeScreenState extends State<PairingCodeScreen> {
   final Color navyBlue = const Color(0xFF042459);
-  // 2. تعريف متغير للكود
-  late String pairCode;
+
+  // 2. متغير لحفظ عملية الاستماع عشان نقفلها لما نخرج من الشاشة
+  late StreamSubscription<DatabaseEvent> _pairingListener;
 
   @override
   void initState() {
     super.initState();
-    // 3. توليد الكود أول ما الشاشة تفتح
-    pairCode = _generateRandomCode();
+    _startListeningForPairing();
   }
 
-  // ميثود لتوليد 6 أرقام عشوائية بتنسيق (XXX XXX)
-  String _generateRandomCode() {
-    var rng = Random();
-    int part1 = rng.nextInt(900) + 100; // رقم من 3 خانات
-    int part2 = rng.nextInt(900) + 100; // رقم تاني من 3 خانات
-    return "$part1 $part2";
+  // 3. الميثود السحرية اللي بتراقب الداتابيز في الوقت الفعلي
+  void _startListeningForPairing() {
+    DatabaseReference codeRef = FirebaseDatabase.instance.ref(
+      "pairing_codes/${widget.pairingCode}",
+    );
+
+    _pairingListener = codeRef.onValue.listen((event) {
+      if (event.snapshot.exists) {
+        final data = event.snapshot.value as Map<dynamic, dynamic>;
+
+        // لو جهاز الابن دخل الكود بنجاح وحدث الحالة لـ "linked"
+        if (data['status'] == 'linked') {
+          _pairingListener.cancel(); // إيقاف الاستماع
+
+          if (!mounted) return;
+
+          // إظهار رسالة نجاح للأب
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Device Paired Successfully! 🎉"),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          // إغلاق شاشة الكود والرجوع للشاشة السابقة (الداشبورد)
+          Navigator.pop(context);
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _pairingListener.cancel(); // مهم جداً عشان نمنع تسريب الذاكرة (Memory Leak)
+    super.dispose();
+  }
+
+  // ميثود صغيرة لتنسيق الكود بشياكة (XXX XXX) زي ما كنت عاملها
+  String get formattedCode {
+    String c = widget.pairingCode;
+    if (c.length == 6) {
+      return "${c.substring(0, 3)} ${c.substring(3, 6)}";
+    }
+    return c;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // أضفت الخلفية البيضاء لضمان الشكل
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -59,7 +101,6 @@ class _PairingCodeScreenState extends State<PairingCodeScreen> {
               ),
               const SizedBox(height: 40),
 
-              // الكود الـ Dynamic داخل الـ Container بتاعك
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 40,
@@ -71,7 +112,7 @@ class _PairingCodeScreenState extends State<PairingCodeScreen> {
                   border: Border.all(color: const Color(0xFF9ED7EB), width: 2),
                 ),
                 child: Text(
-                  pairCode, // استخدام المتغير الـ Dynamic
+                  formattedCode, // استخدام الكود القادم من الشاشة السابقة بعد تنسيقه
                   style: TextStyle(
                     color: navyBlue,
                     fontSize: 40,
@@ -83,23 +124,15 @@ class _PairingCodeScreenState extends State<PairingCodeScreen> {
 
               const SizedBox(height: 50),
 
+              // أضفنا مؤشر تحميل بيلف عشان يدي إحساس إن التطبيق منتظر جهاز الابن
+              const CircularProgressIndicator(color: Color(0xFF9ED7EB)),
               const SizedBox(height: 20),
+
               const Text(
                 "Waiting for child device...",
                 style: TextStyle(
                   fontStyle: FontStyle.italic,
                   color: Colors.grey,
-                ),
-              ),
-
-              // نصيحة إضافية: ممكن تضيف زرار "Refresh" لو حابب يغير الكود
-              TextButton.icon(
-                onPressed: () =>
-                    setState(() => pairCode = _generateRandomCode()),
-                icon: Icon(Icons.refresh, color: navyBlue, size: 18),
-                label: Text(
-                  "Generate new code",
-                  style: TextStyle(color: navyBlue),
                 ),
               ),
             ],

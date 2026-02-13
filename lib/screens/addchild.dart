@@ -4,6 +4,9 @@ import 'package:gardians/screens/pairing.dart';
 import '../models/child.dart';
 import '../utils/shared_prefs_utils.dart';
 import '../utils/constants.dart';
+import 'dart:math'; // نحتاجه لتوليد الكود العشوائي
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class AddChildScreen extends StatefulWidget {
   const AddChildScreen({super.key});
@@ -16,31 +19,66 @@ class _AddChildScreenState extends State<AddChildScreen> {
   final Color navyBlue = const Color(0xFF042459);
   final Color skyBlue = const Color(0xFF9ED7EB);
   int selectedAge = 6;
-
+  bool _isLoading = false;
   // 2. إضافة Controller للاسم
   final TextEditingController _nameController = TextEditingController();
 
-  // 3. ميثود الحفظ (Logic)
-  void _handleGenerateCode() {
+  // 3. ميثود الحفظ (Logic المربوط بـ Firebase)
+  Future<void> _handleGenerateCode() async {
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter your child's name")),
+        const SnackBar(
+          content: Text("Please enter your child's name"),
+          backgroundColor: Colors.redAccent,
+        ),
       );
       return;
     }
 
-    // إنشاء الـ Child Object (حالياً بنجهزه للانتقال، ومستقبلاً هيتبعت للـ Service)
-    final newChild = Child(
-      name: _nameController.text.trim(),
-      email:
-          "${_nameController.text.trim().replaceAll(' ', '').toLowerCase()}@safeguard.com", // إيميل افتراضي للطفل
-    );
+    setState(() => _isLoading = true);
 
-    // الانتقال لصفحة الكود
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const PairingCodeScreen()),
-    );
+    try {
+      // 1. توليد كود عشوائي من 6 أرقام
+      String generatedCode = (100000 + Random().nextInt(900000)).toString();
+
+      // 2. الحصول على معرف الأب (UID) الحالي
+      String? parentUid = FirebaseAuth.instance.currentUser?.uid;
+
+      if (parentUid == null) {
+        throw "Parent is not logged in. Please log in again.";
+      }
+
+      // 3. حفظ الكود في Firebase في مسار مؤقت اسمه pairing_codes
+      DatabaseReference pairingRef = FirebaseDatabase.instance.ref(
+        "pairing_codes/$generatedCode",
+      );
+
+      await pairingRef.set({
+        "parent_uid": parentUid,
+        "child_name": _nameController.text.trim(),
+        "child_age": selectedAge,
+        "createdAt": ServerValue
+            .timestamp, // مفيد لو أردنا مسح الأكواد منتهية الصلاحية لاحقاً
+      });
+
+      if (!mounted) return;
+
+      // 4. الانتقال لصفحة الكود وتمرير الكود الجديد ليتم عرضه للأب
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          // لاحظ أننا نمرر الكود هنا، ستحتاج لاستقباله في شاشة PairingCodeScreen
+          builder: (context) => PairingCodeScreen(pairingCode: generatedCode),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error generating code: $e")));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -196,14 +234,12 @@ class _AddChildScreenState extends State<AddChildScreen> {
             ),
 
             const SizedBox(height: 60),
-
             // Continue Button
             SizedBox(
               width: double.infinity,
               height: 55,
               child: ElevatedButton(
-                // 5. ربط الزرار بالميثود الجديدة
-                onPressed: _handleGenerateCode,
+                onPressed: _isLoading ? null : _handleGenerateCode,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: navyBlue,
                   shape: RoundedRectangleBorder(
@@ -211,14 +247,23 @@ class _AddChildScreenState extends State<AddChildScreen> {
                   ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  "Generate Code",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 25,
+                        height: 25,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        "Generate Code",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
           ],

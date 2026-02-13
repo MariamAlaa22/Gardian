@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:gardians/screens/permission.dart';
 import 'package:pinput/pinput.dart';
-import 'dart:async';
+import 'package:firebase_database/firebase_database.dart';
+// استيراد الـ Utils عشان نحفظ بيانات الربط محلياً
+import '../utils/shared_prefs_utils.dart';
+import '../utils/constants.dart';
 
 class OTPScreen extends StatefulWidget {
   const OTPScreen({super.key});
@@ -12,37 +15,13 @@ class OTPScreen extends StatefulWidget {
 
 class _OTPScreenState extends State<OTPScreen> {
   final TextEditingController _otpController = TextEditingController();
-  int _seconds = 30;
-  late Timer _timer;
-  bool _isLoading = false; 
+  bool _isLoading = false;
 
   final Color skyBlue = const Color(0xFF9ED7EB);
   final Color navyBlue = const Color(0xFF042459);
 
-  void startTimer() {
-    _seconds = 30; 
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_seconds > 0) {
-        if (mounted) {
-          setState(() {
-            _seconds--;
-          });
-        }
-      } else {
-        _timer.cancel();
-      }
-    });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    startTimer();
-  }
-
   @override
   void dispose() {
-    _timer.cancel();
     _otpController.dispose();
     super.dispose();
   }
@@ -73,18 +52,25 @@ class _OTPScreenState extends State<OTPScreen> {
             margin: const EdgeInsets.only(right: 20, top: 12, bottom: 12),
             padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
-              color: skyBlue.withValues(alpha:0.3),
+              color: skyBlue.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
               child: RichText(
                 text: TextSpan(
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
                   children: [
-                    TextSpan(text: "1", style: TextStyle(color: navyBlue)),
                     TextSpan(
-                        text: " / 2",
-                        style: TextStyle(color: navyBlue.withValues(alpha:0.5))),
+                      text: "1",
+                      style: TextStyle(color: navyBlue),
+                    ),
+                    TextSpan(
+                      text: " / 2",
+                      style: TextStyle(color: navyBlue.withValues(alpha: 0.5)),
+                    ),
                   ],
                 ),
               ),
@@ -103,33 +89,30 @@ class _OTPScreenState extends State<OTPScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Verification",
+                    "Pairing Device",
                     style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: navyBlue),
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: navyBlue,
+                    ),
                   ),
                   const SizedBox(height: 8),
+                  // تعديل النص ليكون مناسباً للـ Logic الحقيقي
                   Text(
-                    "Enter the code sent to your email",
+                    "Enter the 6-digit code displayed on your parent's screen.",
                     style: TextStyle(
-                        color: navyBlue.withValues(alpha:0.5), fontSize: 14),
+                      color: navyBlue.withValues(alpha: 0.5),
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 30),
-            Text(
-              "00:${_seconds.toString().padLeft(2, '0')}",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: _seconds < 10 ? Colors.red : const Color(0xFF5AB9D9),
-              ),
-            ),
-            const SizedBox(height: 15),
+            const SizedBox(height: 40),
+
             Pinput(
-              length: 4,
+              length: 6,
               controller: _otpController,
               defaultPinTheme: defaultPinTheme,
               onChanged: (value) => setState(() {}),
@@ -139,59 +122,145 @@ class _OTPScreenState extends State<OTPScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 50),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: navyBlue,
-                disabledBackgroundColor: navyBlue.withValues(alpha:0.6),
-                padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 15),
+                disabledBackgroundColor: navyBlue.withValues(alpha: 0.6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 100,
+                  vertical: 15,
+                ),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(50)),
+                  borderRadius: BorderRadius.circular(50),
+                ),
               ),
-              onPressed: (_isLoading || _otpController.text.length < 4)
+              onPressed: (_isLoading || _otpController.text.length < 6)
                   ? null
                   : () async {
                       setState(() => _isLoading = true);
 
-                      await Future.delayed(const Duration(seconds: 2));
+                      try {
+                        String enteredCode = _otpController.text.trim();
+                        DatabaseReference codeRef = FirebaseDatabase.instance
+                            .ref("pairing_codes/$enteredCode");
 
-                      if (!context.mounted) return;
+                        DataSnapshot snapshot = await codeRef.get();
 
-                      if (_otpController.text == "1234") {
+                        if (!context.mounted) return;
+
+                        if (snapshot.exists) {
+                          Map data = snapshot.value as Map<dynamic, dynamic>;
+
+                          if (data['status'] == 'linked') {
+                            setState(() => _isLoading = false);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  "This code has already been used!",
+                                ),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                            return;
+                          }
+
+                          String parentUid = data['parent_uid'];
+                          String childName = data['child_name'];
+
+                          String childUid = FirebaseDatabase.instance
+                              .ref()
+                              .push()
+                              .key!;
+
+                          await FirebaseDatabase.instance
+                              .ref("users/children/$childUid")
+                              .set({
+                                "name": childName,
+                                "parent_uid": parentUid,
+                                "is_paired": true,
+                                "joinedAt": ServerValue.timestamp,
+                              });
+
+                          await FirebaseDatabase.instance
+                              .ref(
+                                "users/parents/$parentUid/children/$childUid",
+                              )
+                              .set(true);
+                          await codeRef.update({"status": "linked"});
+
+                          await SharedPrefsUtils.setString(
+                            "child_uid",
+                            childUid,
+                          );
+                          await SharedPrefsUtils.setString(
+                            "parent_uid",
+                            parentUid,
+                          );
+                          await SharedPrefsUtils.setBool(
+                            "is_child_device",
+                            true,
+                          );
+
+                          setState(() => _isLoading = false);
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Row(
+                                children: [
+                                  Icon(
+                                    Icons.check_circle,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  SizedBox(width: 10),
+                                  Text(
+                                    "Paired Successfully!",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              backgroundColor: Colors.green.shade600,
+                              behavior: SnackBarBehavior.floating,
+                              duration: const Duration(seconds: 2),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              margin: const EdgeInsets.only(
+                                bottom: 20,
+                                left: 20,
+                                right: 20,
+                              ),
+                            ),
+                          );
+
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const ParentGrantPermissions(),
+                            ),
+                          );
+                        } else {
+                          setState(() => _isLoading = false);
+                          _otpController.clear();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                "Invalid Code! Please check the parent device.",
+                              ),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      } catch (e) {
                         setState(() => _isLoading = false);
-
+                        if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: const Row(
-                              children: [
-                                Icon(Icons.check_circle,
-                                    color: Colors.white, size: 20),
-                                SizedBox(width: 10),
-                                Text("Paired Successfully!",
-                                    style: TextStyle(fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                            backgroundColor: Colors.green.shade600,
-                            behavior: SnackBarBehavior.floating,
-                            duration: const Duration(seconds: 2),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10)),
-                            margin: const EdgeInsets.only(
-                                bottom: 20, left: 20, right: 20),
-                          ),
-                        );
-
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const ParentGrantPermissions()),
-                        );
-                      } else {
-                        setState(() => _isLoading = false);
-                        _otpController.clear();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Invalid Code! Try 1234"),
+                            content: Text("Error: $e"),
                             backgroundColor: Colors.red,
                           ),
                         );
@@ -209,36 +278,10 @@ class _OTPScreenState extends State<OTPScreen> {
                   : const Text(
                       "Verify",
                       style: TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.white),
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-            ),
-            const SizedBox(height: 25),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text("Didn't receive code? ",
-                    style: TextStyle(color: navyBlue.withValues(alpha:0.5))),
-                GestureDetector(
-                  onTap: _seconds == 0
-                      ? () {
-                          setState(() {
-                            _otpController.clear();  
-                            startTimer(); 
-                          });
-                        }
-                      : null,
-                  child: Text(
-                    "Resend",
-                    style: TextStyle(
-                      color: _seconds == 0
-                          ? const Color(0xFF5AB9D9)
-                          : navyBlue.withValues(alpha: 0.5),
-                      fontWeight: FontWeight.bold,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                ),
-              ],
             ),
           ],
         ),

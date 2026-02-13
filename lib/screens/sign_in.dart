@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:gardians/screens/dashboard.dart';
-// استيراد الملفات اللي حولناها
+import 'package:gardians/screens/dashboard.dart'; // تأكد من اسم الملف الصحيح عندك
+import 'package:gardians/screens/signup.dart'; // تأكد من اسم الملف الصحيح عندك
 import '../utils/validators.dart';
 import '../utils/shared_prefs_utils.dart';
 import '../utils/constants.dart';
+// 1. استيراد الخدمة اللي عملناها
+import '../services/auth_service.dart';
 
 class SignIn extends StatefulWidget {
   const SignIn({super.key});
@@ -28,7 +30,6 @@ class _SignInState extends State<SignIn> {
     super.dispose();
   }
 
-  // 1. الوظيفة اللي كانت ناقصة (buildMyField)
   Widget buildMyField({
     required String label,
     required IconData icon,
@@ -87,26 +88,49 @@ class _SignInState extends State<SignIn> {
     );
   }
 
-  // 2. وظيفة تسجيل الدخول المربوطة بالـ SharedPrefs
+  // 2. تعديل الوظيفة لترتبط بـ Firebase
   Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
       try {
-        // حفظ بيانات الجلسة في الـ SharedPrefs اللي حولناها
-        await SharedPrefsUtils.setBool(Constants.autoLogin, true);
-        await SharedPrefsUtils.setString(
-          Constants.email,
-          _emailController.text,
+        // نداء خدمة الـ Firebase
+        String? result = await AuthService().login(
+          _emailController.text.trim(),
+          _passController.text.trim(),
         );
 
-        if (!mounted) return;
+        if (result == "success") {
+          // إذا نجح الدخول، نفعل الـ Auto Login ونحفظ الإيميل محلياً
+          await SharedPrefsUtils.setBool(Constants.autoLogin, true);
+          await SharedPrefsUtils.setString(
+            Constants.email,
+            _emailController.text.trim(),
+          );
 
-        Navigator.pushReplacementNamed(context, "/dashboard");
+          if (!mounted) return;
+
+          // التوجه للداشبورد ومسح شريط التنقل بالكامل
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const ParentDashboard()),
+            (route) => false,
+          );
+        } else {
+          // إذا فشل، نظهر رسالة الخطأ القادمة من Firebase (مثل: الباسورد خطأ)
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result ?? "Login Failed"),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
       } catch (e) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("An unexpected error occurred: $e")),
+        );
       } finally {
         if (mounted) setState(() => _isLoading = false);
       }
@@ -118,9 +142,7 @@ class _SignInState extends State<SignIn> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
-        // استخدمنا Center عشان نضمن التوسيط
         child: SingleChildScrollView(
-          // عشان لو الكيبورد فتحت الشاشة متعملش Error
           child: Form(
             key: _formKey,
             child: Column(
@@ -151,8 +173,6 @@ class _SignInState extends State<SignIn> {
                   ),
                 ),
                 const SizedBox(height: 40),
-
-                // ربط الـ Email بالـ Validator المحول
                 buildMyField(
                   label: "Email",
                   icon: Icons.person_outline,
@@ -165,8 +185,6 @@ class _SignInState extends State<SignIn> {
                     return null;
                   },
                 ),
-
-                // ربط الـ Password بالـ Validator المحول
                 buildMyField(
                   label: "Password",
                   icon: Icons.lock_outline,
@@ -180,9 +198,22 @@ class _SignInState extends State<SignIn> {
                     return null;
                   },
                 ),
-
                 const SizedBox(height: 30),
-
+                const SizedBox(height: 20),
+                TextButton(
+                  onPressed: () => Navigator.pushReplacement(
+                    context,
+                    // تأكد من استيراد ملف الـ signup.dart فوق
+                    MaterialPageRoute(builder: (context) => const Signup()),
+                  ),
+                  child: Text(
+                    "Don't have an account? Sign Up",
+                    style: TextStyle(
+                      color: navyBlue.withOpacity(0.6),
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _handleLogin,
                   style: ElevatedButton.styleFrom(
@@ -200,6 +231,7 @@ class _SignInState extends State<SignIn> {
                       borderRadius: BorderRadius.circular(50),
                     ),
                   ),
+
                   child: _isLoading
                       ? const SizedBox(
                           height: 20,

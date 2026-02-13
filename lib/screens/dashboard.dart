@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 // استيراد الشاشات
 import 'package:gardians/screens/devices.dart';
@@ -32,21 +34,24 @@ class _ParentDashboardState extends State<ParentDashboard> {
   final Color backgroundGrey = const Color(0xFFF8F9FA);
 
   int _selectedIndex = 0;
-
-  // شلنا late عشان نتفادى الـ LateInitializationError
   List<Widget> _pages = [];
+
+  // بيانات الأب والطفل
   late model.Parent currentParent;
   late Child selectedChild;
+
+  // المرجع لقاعدة البيانات
+  final _dbRef = FirebaseDatabase.instance.ref("users/parents");
+  final String _uid = FirebaseAuth.instance.currentUser?.uid ?? "";
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadLocalData(); // تحميل البيانات المحلية كـ Backup
     _initializePages();
   }
 
-  // تحميل البيانات من الـ Shared Preferences
-  void _loadData() {
+  void _loadLocalData() {
     String savedName =
         SharedPrefsUtils.getString(Constants.name) ?? "Guardian Parent";
     String savedEmail =
@@ -58,7 +63,6 @@ class _ParentDashboardState extends State<ParentDashboard> {
     selectedChild = Child(name: savedChildName, email: "");
   }
 
-  // بناء القائمة الأساسية للصفحات
   void _initializePages() {
     _pages = [
       _dashboardBody(),
@@ -68,10 +72,9 @@ class _ParentDashboardState extends State<ParentDashboard> {
     ];
   }
 
-  // ميثود لتحديث الواجهة عند تغيير الطفل
   void _refreshChildData() {
     setState(() {
-      _loadData();
+      _loadLocalData();
       _initializePages();
     });
   }
@@ -93,49 +96,76 @@ class _ParentDashboardState extends State<ParentDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: backgroundGrey,
-      drawer: _buildDynamicDrawer(),
-      appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 151, 207, 220),
-        elevation: 0,
-        title: Text(
-          _getAppBarTitle(),
-          style: TextStyle(color: navyBlue, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: Icon(Icons.menu, color: navyBlue),
-            onPressed: () => Scaffold.of(context).openDrawer(),
+    // 1. استخدام StreamBuilder لمراقبة بيانات الأب في Firebase
+    return StreamBuilder(
+      stream: _dbRef.child(_uid).onValue,
+      builder: (context, AsyncSnapshot<DatabaseEvent> snapshot) {
+        if (snapshot.hasData && snapshot.data!.snapshot.value != null) {
+          final data = Map<dynamic, dynamic>.from(
+            snapshot.data!.snapshot.value as Map,
+          );
+
+          // تحديث بيانات الأب من السيرفر
+          currentParent = model.Parent(
+            name: data['name'] ?? currentParent.name,
+            email: data['email'] ?? currentParent.email,
+          );
+
+          // حفظ الاسم الجديد محلياً للـ Cache
+          SharedPrefsUtils.setString(Constants.name, currentParent.name!);
+        }
+
+        return Scaffold(
+          backgroundColor: backgroundGrey,
+          drawer: _buildDynamicDrawer(),
+          appBar: AppBar(
+            backgroundColor: const Color.fromARGB(255, 151, 207, 220),
+            elevation: 0,
+            title: Text(
+              _getAppBarTitle(),
+              style: TextStyle(color: navyBlue, fontWeight: FontWeight.bold),
+            ),
+            centerTitle: true,
+            leading: Builder(
+              builder: (context) => IconButton(
+                icon: Icon(Icons.menu, color: navyBlue),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+            ),
           ),
-        ),
-      ),
-      body: _pages.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : IndexedStack(index: _selectedIndex, children: _pages),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        iconSize: 28,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color.fromARGB(255, 47, 152, 168),
-        unselectedItemColor: navyBlue.withOpacity(0.3),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.grid_view_rounded),
-            label: "",
+          body: _pages.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : IndexedStack(index: _selectedIndex, children: _pages),
+          bottomNavigationBar: BottomNavigationBar(
+            currentIndex: _selectedIndex,
+            onTap: (index) => setState(() => _selectedIndex = index),
+            showSelectedLabels: false,
+            showUnselectedLabels: false,
+            iconSize: 28,
+            type: BottomNavigationBarType.fixed,
+            selectedItemColor: const Color.fromARGB(255, 47, 152, 168),
+            unselectedItemColor: navyBlue.withOpacity(0.3),
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.grid_view_rounded),
+                label: "",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.location_pin),
+                label: "",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.notifications_none),
+                label: "",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person_outline),
+                label: "",
+              ),
+            ],
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.location_pin), label: ""),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications_none),
-            label: "",
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: ""),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -248,6 +278,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
           }),
           const Divider(),
           _buildDrawerItem(Icons.logout, "Logout", () {
+            FirebaseAuth.instance.signOut(); // تسجيل الخروج من Firebase
             SharedPrefsUtils.clear();
             Navigator.pushAndRemoveUntil(
               context,
@@ -261,6 +292,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
     );
   }
 
+  // ميثودز الـ UI فضلت زي ما هي بالظبط
   Widget _buildChildSelector() {
     return Container(
       padding: const EdgeInsets.all(12),

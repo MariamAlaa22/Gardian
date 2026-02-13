@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:gardians/screens/dashboard.dart';
+import 'package:gardians/screens/dashboard.dart'; // تأكد أن المسار صحيح لملف الداشبورد
 import 'package:gardians/screens/sign_in.dart';
-// استيراد الملفات اللي حولناها
 import '../utils/validators.dart';
 import '../utils/shared_prefs_utils.dart';
 import '../utils/constants.dart';
+import '../services/auth_service.dart';
 
 class Signup extends StatefulWidget {
   const Signup({super.key});
@@ -34,29 +34,49 @@ class _SignupState extends State<Signup> {
     super.dispose();
   }
 
-  // وظيفة إنشاء الحساب
+  // الوظيفة المحدثة لإنشاء الحساب والتوجه للداشبورد فوراً
   Future<void> _handleSignup() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
       try {
-        // 1. حفظ البيانات في SharedPrefs (كأننا سجلنا المستخدم محلياً)
-        await SharedPrefsUtils.setBool(Constants.autoLogin, true);
-        await SharedPrefsUtils.setString(
-          Constants.email,
-          _emailController.text,
+        // نداء الـ AuthService لإنشاء الحساب
+        String? result = await AuthService().signUp(
+          _nameController.text.trim(),
+          _emailController.text.trim(),
+          _passController.text.trim(),
         );
-        await SharedPrefsUtils.setString(Constants.name, _nameController.text);
+        if (result == "success") {
+          // حفظ البيانات محلياً
+          await SharedPrefsUtils.setString(
+            Constants.name,
+            _nameController.text.trim(),
+          );
+          await SharedPrefsUtils.setBool(Constants.autoLogin, true);
 
-        // هنا مستقبلاً هننده على AccountUtils لإنشاء الحساب في Firebase
+          if (!mounted) return;
 
-        if (!mounted) return;
+          // إخفاء الـ Loading قبل النقل
+          setState(() => _isLoading = false);
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const SignIn()),
-        );
+          // أهم سطر: النقل للداشبورد ومسح شاشة الـ Signup من الذاكرة
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const ParentDashboard()),
+            (route) => false,
+          );
+        } else {
+          // إظهار رسالة الخطأ لو الحساب موجود أو فيه مشكلة
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result ?? "Signup Failed"),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
       } catch (e) {
+        if (!mounted) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
@@ -66,7 +86,6 @@ class _SignupState extends State<Signup> {
     }
   }
 
-  // الـ buildMyField كما هي في كودك
   Widget buildMyField({
     required String label,
     required IconData icon,
@@ -121,128 +140,125 @@ class _SignupState extends State<Signup> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SizedBox(
-        width: double.infinity,
+      body: Center(
         child: SingleChildScrollView(
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height,
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Headers
-                  SizedBox(
-                    width: 266,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Create",
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: navyBlue,
-                          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 266,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Create",
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: navyBlue,
                         ),
-                        const Text(
-                          "Account :)",
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF5AB9D9),
-                          ),
+                      ),
+                      const Text(
+                        "Account :)",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF5AB9D9),
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 35),
-
-                  // Username field
-                  buildMyField(
-                    label: "Username",
-                    icon: Icons.person_outline,
-                    myController: _nameController,
-                    validator: (value) => !Validators.isValidName(value ?? "")
-                        ? "Name is required (max 15 chars)"
-                        : null,
-                  ),
-
-                  // Email field
-                  buildMyField(
-                    label: "Email",
-                    icon: Icons.email_outlined,
-                    myController: _emailController,
-                    validator: (value) => !Validators.isValidEmail(value ?? "")
-                        ? "Invalid email format"
-                        : null,
-                  ),
-
-                  // Password field
-                  buildMyField(
-                    label: "Password",
-                    icon: Icons.lock_outline,
-                    myController: _passController,
-                    isPass: true,
-                    isObscured: _obscureText,
-                    onToggle: () =>
-                        setState(() => _obscureText = !_obscureText),
-                    validator: (value) =>
-                        !Validators.isValidPassword(value ?? "")
-                        ? "At least 6 characters"
-                        : null,
-                  ),
-
-                  // Confirm Password field
-                  buildMyField(
-                    label: "Confirm Password",
-                    icon: Icons.shield_outlined,
-                    myController: _confirmController,
-                    isPass: true,
-                    isObscured: _obscureConfirmText,
-                    onToggle: () => setState(
-                      () => _obscureConfirmText = !_obscureConfirmText,
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty)
-                        return "Please confirm password";
-                      if (value != _passController.text)
-                        return "Passwords don't match";
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _handleSignup,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: navyBlue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 100,
-                        vertical: 15,
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(50),
-                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 35),
+                buildMyField(
+                  label: "Username",
+                  icon: Icons.person_outline,
+                  myController: _nameController,
+                  validator: (value) => !Validators.isValidName(value ?? "")
+                      ? "Name is required"
+                      : null,
+                ),
+                buildMyField(
+                  label: "Email",
+                  icon: Icons.email_outlined,
+                  myController: _emailController,
+                  validator: (value) => !Validators.isValidEmail(value ?? "")
+                      ? "Invalid email format"
+                      : null,
+                ),
+                buildMyField(
+                  label: "Password",
+                  icon: Icons.lock_outline,
+                  myController: _passController,
+                  isPass: true,
+                  isObscured: _obscureText,
+                  onToggle: () => setState(() => _obscureText = !_obscureText),
+                  validator: (value) => !Validators.isValidPassword(value ?? "")
+                      ? "At least 6 characters"
+                      : null,
+                ),
+                buildMyField(
+                  label: "Confirm Password",
+                  icon: Icons.shield_outlined,
+                  myController: _confirmController,
+                  isPass: true,
+                  isObscured: _obscureConfirmText,
+                  onToggle: () => setState(
+                    () => _obscureConfirmText = !_obscureConfirmText,
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty)
+                      return "Please confirm password";
+                    if (value != _passController.text)
+                      return "Passwords don't match";
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 30),
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _handleSignup,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: navyBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 100,
+                      vertical: 15,
                     ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text(
-                            "Sign Up",
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
                           ),
+                        )
+                      : const Text(
+                          "Sign Up",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                ),
+                const SizedBox(height: 20),
+                TextButton(
+                  onPressed: () => Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SignIn()),
                   ),
-                ],
-              ),
+                  child: Text(
+                    "Already have an account? LogIn",
+                    style: TextStyle(
+                      color: navyBlue.withOpacity(0.6),
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
