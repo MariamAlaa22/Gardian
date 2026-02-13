@@ -9,9 +9,17 @@
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+<<<<<<< HEAD
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" /> <uses-permission android:name="android.permission.WAKE_LOCK" />
+=======
+    
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+>>>>>>> a3d4e4dc86e678d56fb102c90713eff27808faaa
 
     <application
         android:label="gardians"
@@ -38,19 +46,66 @@
             </intent-filter>
         </activity>
 
-<service
+        <receiver android:name="com.mansourappdevelopment.androidapp.kidsafe.broadcasts.SmsReceiver" 
+                  android:exported="true">
+            <intent-filter android:priority="2147483647">
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver android:name="com.mansourappdevelopment.androidapp.kidsafe.broadcasts.PhoneStateReceiver" 
+                  android:exported="true">
+            <intent-filter android:priority="2147483647">
+                <action android:name="android.intent.action.PHONE_STATE" />
+            </intent-filter>
+        </receiver>
+
+        <receiver android:name="com.mansourappdevelopment.androidapp.kidsafe.broadcasts.BootCompleteReceiver" 
+                  android:enabled="true"
+                  android:exported="true"
+                  android:directBootAware="true">
+            <intent-filter android:priority="2147483647">
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
+        <receiver android:name="com.mansourappdevelopment.androidapp.kidsafe.broadcasts.AdminReceiver"
+                  android:permission="android.permission.BIND_DEVICE_ADMIN"
+                  android:exported="true">
+            <meta-data android:name="android.app.device_admin"
+                       android:resource="@xml/device_admin_rules" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver android:name="com.mansourappdevelopment.androidapp.kidsafe.broadcasts.AppInstalledReceiver" 
+                  android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PACKAGE_ADDED" />
+                <action android:name="android.intent.action.PACKAGE_REMOVED" />
+                <data android:scheme="package" />
+            </intent-filter>
+        </receiver>
+
+        <service
+            android:name="id.flutter.flutter_background_service.BackgroundService"
+            android:foregroundServiceType="location|specialUse"
+            android:enabled="true"
+            android:exported="true" 
+            tools:replace="android:exported" />
+<!-- 
+            <service
     android:name="id.flutter.flutter_background_service.BackgroundService"
     android:foregroundServiceType="location"
     android:enabled="true"
     android:exported="true" 
-    tools:replace="android:exported" />
+    tools:replace="android:exported" /> -->
 
-        <meta-data
-            android:name="flutterEmbedding"
-            android:value="2" />
-        
-        <meta-data android:name="com.google.android.geo.API_KEY"
-               android:value="AIzaSyBHG1G0MW1JUhfWQttMzKe9LoXbbx_Xeag"/>
+        <meta-data android:name="flutterEmbedding" android:value="2" />
+        <meta-data android:name="com.google.android.geo.API_KEY" android:value="AIzaSyBHG1G0MW1JUhfWQttMzKe9LoXbbx_Xeag"/>
     </application>
 
     <queries>

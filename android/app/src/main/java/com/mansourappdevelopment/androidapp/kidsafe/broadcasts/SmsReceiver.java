@@ -7,30 +7,34 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.telephony.SmsMessage;
+import android.util.Log;
 import java.util.HashMap;
 import io.flutter.plugin.common.MethodChannel;
-
-// السطر ده لازم يكون هنا بالظبط بره الـ class فوق
 import com.example.gardians.MainActivity; 
 
 public class SmsReceiver extends BroadcastReceiver {
+    private static final String TAG = "SmsReceiver";
+
     @Override
     public void onReceive(Context context, Intent intent) {
-        Bundle bundle = intent.getExtras();
-        if (bundle != null) {
-            Object[] pdusObjs = (Object[]) bundle.get("pdus");
-            if (pdusObjs == null) return;
+        // أهم سطر عشان نعرف لو الأندرويد استلمها أصلاً
+        Log.i(TAG, "📩 رسالة جديدة وصلت للأندرويد بره فلاتر!");
 
-            StringBuilder messageBodyFull = new StringBuilder();
-            String senderPhoneNumber = "";
+        if (intent.getAction() != null && intent.getAction().equals("android.provider.Telephony.SMS_RECEIVED")) {
+            Bundle bundle = intent.getExtras();
+            if (bundle != null) {
+                Object[] pdus = (Object[]) bundle.get("pdus");
+                if (pdus != null) {
+                    for (Object pdu : pdus) {
+                        SmsMessage smsMessage = SmsMessage.createFromPdu((byte[]) pdu);
+                        String sender = smsMessage.getDisplayOriginatingAddress();
+                        String body = smsMessage.getMessageBody();
 
-            for (Object pdusObj : pdusObjs) {
-                SmsMessage currentMessage = SmsMessage.createFromPdu((byte[]) pdusObj);
-                senderPhoneNumber = currentMessage.getDisplayOriginatingAddress();
-                messageBodyFull.append(currentMessage.getDisplayMessageBody().replace("\n", " "));
+                        Log.i(TAG, "📩 محتوى الرسالة: من " + sender + " النص: " + body);
+                        sendToFlutter(sender, body);
+                    }
+                }
             }
-            
-            sendToFlutter(senderPhoneNumber, messageBodyFull.toString());
         }
     }
 
@@ -38,7 +42,6 @@ public class SmsReceiver extends BroadcastReceiver {
         new Handler(Looper.getMainLooper()).post(new Runnable() {
             @Override
             public void run() {
-                // بنادي على الـ Instance اللي في MainActivity
                 if (MainActivity.Companion.getFlutterEngineInstance() != null) {
                     HashMap<String, String> smsData = new HashMap<>();
                     smsData.put("sender", sender);
@@ -46,6 +49,9 @@ public class SmsReceiver extends BroadcastReceiver {
 
                     new MethodChannel(MainActivity.Companion.getFlutterEngineInstance().getDartExecutor().getBinaryMessenger(), "com.kidsafe/sms")
                             .invokeMethod("onMessageReceived", smsData);
+                    Log.i(TAG, "✅ تم إرسال الرسالة بنجاح لمحرك فلاتر");
+                } else {
+                    Log.e(TAG, "❌ محرك فلاتر (Flutter Engine) لسه ميت، مش عارف أبعت الرسالة!");
                 }
             }
         });
