@@ -2,12 +2,12 @@ plugins {
     id("com.android.application")
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
-    // السطر ده لازم يتكتب كدة بالظبط في ملفات الـ .kts
-    id("com.google.gms.google-services") 
+    id("com.google.gms.google-services")
 }
 
 android {
-    namespace = "com.example.gardians"
+    // توحيد الـ namespace مع ملفات الجافا اللي عندك
+    namespace = "com.mansourappdevelopment.androidapp.kidsafe" 
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,10 +21,8 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.gardians"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        // توحيد الـ Application ID عشان الفيربيز والـ AdminReceiver
+        applicationId = "com.mansourappdevelopment.androidapp.kidsafe"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -33,8 +31,6 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -42,4 +38,15 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // استدعاء مكتبات Firebase بصيغة الـ Kotlin DSL عشان ملفات الـ Java تشوفها
+    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-database")
+    
+    // لدعم مكتبات أندرويد الحديثة في ملفات الـ Java
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("com.google.android.material:material:1.9.0")
 }

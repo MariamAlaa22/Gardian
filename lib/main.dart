@@ -10,13 +10,10 @@ import 'package:gardians/screens/Signup.dart';
 import 'package:gardians/screens/dashboard.dart';
 import 'package:gardians/screens/addchild.dart';
 import 'package:gardians/screens/devices.dart';
-import 'package:gardians/utils/shared_prefs_utils.dart';
-import 'package:gardians/services/main_foreground_service.dart'; // ضيفي ده
-import 'test_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(); // تأكدي إن ملف google-services.json في مكانه
   runApp(const MyApp());
 }
 
@@ -27,33 +24,66 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  static const platform = MethodChannel('com.kidsafe/sms');
+  // تعريف القنوات (Channels) للربط مع كود الجافا
+  static const smsChannel = MethodChannel('com.kidsafe/sms');
+  static const callChannel = MethodChannel('com.kidsafe/calls');
 
   @override
   void initState() {
     super.initState();
-    _initSmsListener();
+    _initNativeListeners();
   }
 
-  void _initSmsListener() {
-    platform.setMethodCallHandler((call) async {
+  void _initNativeListeners() {
+    // 1. استقبال الرسائل النصية
+    smsChannel.setMethodCallHandler((call) async {
+      print("🔔 إشارة رسالة وصلت من الأندرويد: ${call.method}"); // للتأكد في الـ Debug Console
+      
       if (call.method == "onMessageReceived") {
-        final String sender = call.arguments['sender'];
-        final String body = call.arguments['body'];
-
-        // الرفع للـ Firebase بأمان من كود الـ Dart
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          DatabaseReference ref = FirebaseDatabase.instance.ref("users/childs/${user.uid}/messages");
-          await ref.push().set({
-            "senderPhoneNumber": sender,
-            "messageBody": body,
-            "timeReceived": DateTime.now().toString(),
-            "contactName": "Unknown"
-          });
-        }
+        final String sender = call.arguments['sender'] ?? "Unknown";
+        final String body = call.arguments['body'] ?? "";
+        
+        print("📩 محتوى الرسالة: من $sender نصها: $body");
+        _uploadToFirebase("messages", {
+          "senderPhoneNumber": sender,
+          "messageBody": body,
+          "timeReceived": DateTime.now().toString(),
+        });
       }
+      return null;
     });
+
+    // 2. استقبال بيانات المكالمات
+    callChannel.setMethodCallHandler((call) async {
+      print("📞 إشارة مكالمة وصلت من الأندرويد: ${call.method}");
+      
+      if (call.method == "onCallEvent") {
+        final String status = call.arguments['status'] ?? "Unknown";
+        final String number = call.arguments['phoneNumber'] ?? "Private";
+        final String duration = call.arguments['duration'] ?? "0";
+        
+        print("📱 حدث مكالمة: $status رقم: $number مدة: $duration");
+        _uploadToFirebase("calls", {
+          "callType": status,
+          "phoneNumber": number,
+          "callDuration": duration,
+          "callTime": DateTime.now().toString(),
+        });
+      }
+      return null;
+    });
+  }
+
+  // دالة رفع البيانات للفيربيز
+  void _uploadToFirebase(String folder, Map<String, dynamic> data) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      DatabaseReference ref = FirebaseDatabase.instance.ref("users/childs/${user.uid}/$folder");
+      await ref.push().set(data);
+      print("✅ تم الرفع إلى Firebase في مجلد $folder");
+    } else {
+      print("⚠️ تنبيه: البيانات وصلت لفلاتر بس مفيش مستخدم مسجل دخول للرفع للفيربيز!");
+    }
   }
 
   @override
