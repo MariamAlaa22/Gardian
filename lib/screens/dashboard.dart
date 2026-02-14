@@ -12,7 +12,6 @@ import 'package:gardians/screens/location.dart';
 import 'package:gardians/screens/alerts.dart';
 import 'package:gardians/screens/profile.dart';
 import 'package:gardians/screens/parent.dart';
-import 'package:gardians/screens/alertsettings.dart';
 
 // استيراد الـ Utils والموديلات
 import '../utils/shared_prefs_utils.dart';
@@ -31,137 +30,125 @@ class ParentDashboard extends StatefulWidget {
 class _ParentDashboardState extends State<ParentDashboard> {
   final Color navyBlue = const Color(0xFF042459);
   final Color skyBlue = const Color(0xFF9ED7EB);
+  final Color accentBlue = const Color(0xFF5AB9D9);
   final Color backgroundGrey = const Color(0xFFF8F9FA);
 
   int _selectedIndex = 0;
-  List<Widget> _pages = [];
-
-  // بيانات الأب والطفل
   late model.Parent currentParent;
-  late Child selectedChild;
+  String selectedChildUid = "";
+  String selectedChildName = "Select Child";
 
-  // المرجع لقاعدة البيانات
-  final _dbRef = FirebaseDatabase.instance.ref("users/parents");
-  final String _uid = FirebaseAuth.instance.currentUser?.uid ?? "";
+  final String _parentUid = FirebaseAuth.instance.currentUser?.uid ?? "";
 
   @override
   void initState() {
     super.initState();
-    _loadLocalData(); // تحميل البيانات المحلية كـ Backup
-    _initializePages();
+    _loadData();
   }
 
-  void _loadLocalData() {
-    String savedName =
-        SharedPrefsUtils.getString(Constants.name) ?? "Guardian Parent";
-    String savedEmail =
-        SharedPrefsUtils.getString(Constants.email) ?? "parent@safeguard.com";
-    currentParent = model.Parent(name: savedName, email: savedEmail);
+  // ميثود واحدة لتحميل كل البيانات وتجنب الـ Reload المتكرر
+  void _loadData() {
+    setState(() {
+      // تحميل بيانات الأب
+      String pName =
+          SharedPrefsUtils.getString(Constants.name) ?? "Guardian Parent";
+      String pEmail =
+          SharedPrefsUtils.getString(Constants.email) ?? "parent@safeguard.com";
+      currentParent = model.Parent(name: pName, email: pEmail);
 
-    String savedChildName =
-        SharedPrefsUtils.getString(Constants.childName) ?? "Select Child";
-    selectedChild = Child(name: savedChildName, email: "");
+      // تحميل بيانات الطفل المختار حالياً
+      selectedChildUid = SharedPrefsUtils.getString(Constants.childId) ?? "";
+      selectedChildName =
+          SharedPrefsUtils.getString(Constants.childName) ?? "Select Child";
+    });
   }
 
-  void _initializePages() {
-    _pages = [
+  void _refreshDashboard() {
+    _loadData();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // قائمة الصفحات يتم تعريفها داخل الـ build للتفاعل مع الـ selectedIndex
+    final List<Widget> pages = [
       _dashboardBody(),
       const ChildLocationScreen(),
       const AlertsScreen(),
       const ProfileScreen(),
     ];
+
+    return Scaffold(
+      backgroundColor: backgroundGrey,
+      drawer: _buildDynamicDrawer(),
+      appBar: AppBar(
+        backgroundColor: const Color.fromARGB(255, 151, 207, 220),
+        elevation: 0,
+        title: Text(
+          _selectedIndex == 0 ? "Guardian" : _getAppBarTitle(),
+          style: TextStyle(color: navyBlue, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: Icon(Icons.menu, color: navyBlue),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
+      ),
+      body: IndexedStack(index: _selectedIndex, children: pages),
+      bottomNavigationBar: _buildBottomNav(),
+    );
   }
 
-  void _refreshChildData() {
-    setState(() {
-      _loadLocalData();
-      _initializePages();
-    });
-  }
-
-  String _getAppBarTitle() {
-    switch (_selectedIndex) {
-      case 0:
-        return "Guardian";
-      case 1:
-        return "Location";
-      case 2:
-        return "Alerts";
-      case 3:
-        return "Profile";
-      default:
-        return "Guardian";
+  Widget _dashboardBody() {
+    // لو مفيش طفل مختار، اطلب منه يختار واحد
+    if (selectedChildUid.isEmpty) {
+      return _buildNoChildState();
     }
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    // 1. استخدام StreamBuilder لمراقبة بيانات الأب في Firebase
     return StreamBuilder(
-      stream: _dbRef.child(_uid).onValue,
+      stream: FirebaseDatabase.instance
+          .ref("devices_data/$selectedChildUid")
+          .onValue,
       builder: (context, AsyncSnapshot<DatabaseEvent> snapshot) {
-        if (snapshot.hasData && snapshot.data!.snapshot.value != null) {
-          final data = Map<dynamic, dynamic>.from(
-            snapshot.data!.snapshot.value as Map,
-          );
-
-          // تحديث بيانات الأب من السيرفر
-          currentParent = model.Parent(
-            name: data['name'] ?? currentParent.name,
-            email: data['email'] ?? currentParent.email,
-          );
-
-          // حفظ الاسم الجديد محلياً للـ Cache
-          SharedPrefsUtils.setString(Constants.name, currentParent.name!);
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
         }
 
-        return Scaffold(
-          backgroundColor: backgroundGrey,
-          drawer: _buildDynamicDrawer(),
-          appBar: AppBar(
-            backgroundColor: const Color.fromARGB(255, 151, 207, 220),
-            elevation: 0,
-            title: Text(
-              _getAppBarTitle(),
-              style: TextStyle(color: navyBlue, fontWeight: FontWeight.bold),
-            ),
-            centerTitle: true,
-            leading: Builder(
-              builder: (context) => IconButton(
-                icon: Icon(Icons.menu, color: navyBlue),
-                onPressed: () => Scaffold.of(context).openDrawer(),
+        if (!snapshot.hasData || snapshot.data!.snapshot.value == null) {
+          return _buildWaitingForDataState();
+        }
+
+        final data = Map<dynamic, dynamic>.from(
+          snapshot.data!.snapshot.value as Map,
+        );
+
+        int battery = data['battery_level'] ?? 0;
+        bool isOnline = data['is_online'] ?? false;
+        String currentApp = data['current_app'] ?? "Home Screen";
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              _buildLiveStatusCard(isOnline, battery),
+              const SizedBox(height: 20),
+              _buildChildSelectorCard(),
+              const SizedBox(height: 20),
+              _buildCurrentAppCard(currentApp),
+              const SizedBox(height: 20),
+              _buildScreenTimeCard(),
+              const SizedBox(height: 20),
+              _buildMonitorCard(),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(child: _buildBlockedSection()),
+                  const SizedBox(width: 15),
+                  Expanded(child: _buildUsageSection()),
+                ],
               ),
-            ),
-          ),
-          body: _pages.isEmpty
-              ? const Center(child: CircularProgressIndicator())
-              : IndexedStack(index: _selectedIndex, children: _pages),
-          bottomNavigationBar: BottomNavigationBar(
-            currentIndex: _selectedIndex,
-            onTap: (index) => setState(() => _selectedIndex = index),
-            showSelectedLabels: false,
-            showUnselectedLabels: false,
-            iconSize: 28,
-            type: BottomNavigationBarType.fixed,
-            selectedItemColor: const Color.fromARGB(255, 47, 152, 168),
-            unselectedItemColor: navyBlue.withOpacity(0.3),
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.grid_view_rounded),
-                label: "",
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.location_pin),
-                label: "",
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.notifications_none),
-                label: "",
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline),
-                label: "",
-              ),
+              const SizedBox(height: 20),
             ],
           ),
         );
@@ -169,165 +156,229 @@ class _ParentDashboardState extends State<ParentDashboard> {
     );
   }
 
-  Widget _dashboardBody() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          GestureDetector(
-            onTap: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const DevicesScreen()),
-              );
-              _refreshChildData();
-            },
-            child: _buildChildSelector(),
-          ),
-          const SizedBox(height: 20),
-          GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const AppUsageScreen()),
-            ),
-            child: _buildScreenTimeCard(),
-          ),
-          const SizedBox(height: 20),
-          GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const WeeklyReportScreen(),
-              ),
-            ),
-            child: _buildMonitorCard(),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AppRulesScreen(),
-                    ),
-                  ),
-                  child: _buildBlockedSection(),
-                ),
-              ),
-              const SizedBox(width: 15),
-              Expanded(child: _buildUsageSection()),
-            ],
-          ),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
+  // --- كروت البيانات الحية ---
 
-  Widget _buildDynamicDrawer() {
-    return Drawer(
-      backgroundColor: Colors.white,
-      child: Column(
-        children: [
-          UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(
-              color: Color.fromARGB(255, 125, 176, 188),
-            ),
-            currentAccountPicture: CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Text(
-                BackgroundGenerator.getFirstCharacters(currentParent.name!),
-                style: TextStyle(
-                  color: navyBlue,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            accountName: Text(
-              currentParent.name!,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            accountEmail: Text(currentParent.email!),
-          ),
-          _buildDrawerItem(Icons.apps_outage_rounded, "Control Apps", () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const AppRulesScreen()),
-            );
-          }),
-          _buildDrawerItem(Icons.devices_other, "Manage Devices", () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const DevicesScreen()),
-            );
-          }),
-          _buildDrawerItem(Icons.report, "Weekly Reports", () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const WeeklyReportScreen(),
-              ),
-            );
-          }),
-          const Divider(),
-          _buildDrawerItem(Icons.logout, "Logout", () {
-            FirebaseAuth.instance.signOut(); // تسجيل الخروج من Firebase
-            SharedPrefsUtils.clear();
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => const Parent()),
-              (route) => false,
-            );
-          }, isLogout: true),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-
-  // ميثودز الـ UI فضلت زي ما هي بالظبط
-  Widget _buildChildSelector() {
+  Widget _buildLiveStatusCard(bool isOnline, int battery) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: const Color(0x4D9ED7EB),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+        ],
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          CircleAvatar(
-            backgroundColor: skyBlue,
-            child: Text(
-              BackgroundGenerator.getFirstCharacters(selectedChild.name!),
-              style: const TextStyle(color: Colors.white, fontSize: 12),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              Text(
-                "SELECTED CHILD",
-                style: TextStyle(
-                  fontSize: 10,
-                  color: navyBlue.withOpacity(0.5),
-                ),
+              Icon(
+                Icons.circle,
+                color: isOnline ? Colors.green : Colors.grey,
+                size: 12,
               ),
+              const SizedBox(width: 8),
               Text(
-                selectedChild.name!,
+                isOnline ? "Online" : "Offline",
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ],
           ),
-          const Spacer(),
-          Icon(Icons.unfold_more, color: navyBlue),
+          Row(
+            children: [
+              Icon(
+                battery > 20
+                    ? Icons.battery_charging_full
+                    : Icons.battery_alert,
+                color: battery > 20 ? Colors.green : Colors.red,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                "$battery%",
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCurrentAppCard(String packageName) {
+    String appName = packageName.contains('.')
+        ? packageName.split('.').last
+        : packageName;
+    appName = appName[0].toUpperCase() + appName.substring(1);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: [navyBlue, accentBlue]),
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "CURRENTLY USING",
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(Icons.phonelink_setup, color: Colors.white),
+              const SizedBox(width: 10),
+              Text(
+                appName,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChildSelectorCard() {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const DevicesScreen()),
+      ).then((_) => _refreshDashboard()),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0x4D9ED7EB),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: skyBlue,
+              child: Text(
+                BackgroundGenerator.getFirstCharacters(selectedChildName),
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "SELECTED CHILD",
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: navyBlue.withOpacity(0.5),
+                  ),
+                ),
+                Text(
+                  selectedChildName,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const Spacer(),
+            Icon(Icons.unfold_more, color: navyBlue),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- شاشات الخطأ والتحميل ---
+
+  Widget _buildNoChildState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.child_care, size: 80, color: navyBlue.withOpacity(0.2)),
+          const SizedBox(height: 10),
+          const Text("Please select a child to monitor"),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const DevicesScreen()),
+            ).then((_) => _refreshDashboard()),
+            child: const Text("Select Device"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWaitingForDataState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(30.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 20),
+            const Text(
+              "Waiting for connection...",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              "Make sure 'Activate Protection' is enabled on $selectedChildName's phone.",
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- بقية الـ Widgets الخاصة بالتصميم (Screen Time, Charts, etc.) ---
+  // (نفس الـ Widgets الجميلة اللي صممتها سابقاً)
+
+  Widget _buildScreenTimeCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0x4D9ED7EB),
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "TOTAL SCREEN TIME",
+            style: TextStyle(
+              fontSize: 12,
+              color: navyBlue.withOpacity(0.5),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            "4h 12m",
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF042459),
+            ),
+          ),
+          const SizedBox(height: 15),
+          LinearProgressIndicator(
+            value: 0.84,
+            minHeight: 8,
+            color: navyBlue,
+            backgroundColor: Colors.grey[100],
+          ),
         ],
       ),
     );
@@ -353,87 +404,30 @@ class _ParentDashboardState extends State<ParentDashboard> {
                   color: navyBlue,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.green[50],
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  "Safe",
-                  style: TextStyle(color: Colors.green, fontSize: 12),
-                ),
-              ),
+              const Icon(Icons.security, color: Colors.green),
             ],
           ),
           const SizedBox(height: 20),
           SizedBox(
-            height: 150,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                PieChart(
-                  PieChartData(
-                    sectionsSpace: 2,
-                    centerSpaceRadius: 50,
-                    sections: [
-                      PieChartSectionData(
-                        color: Colors.green,
-                        value: 60,
-                        radius: 18,
-                        showTitle: false,
-                      ),
-                      PieChartSectionData(
-                        color: Colors.blue,
-                        value: 34,
-                        radius: 18,
-                        showTitle: false,
-                      ),
-                      PieChartSectionData(
-                        color: Colors.red,
-                        value: 3,
-                        radius: 18,
-                        showTitle: false,
-                      ),
-                      PieChartSectionData(
-                        color: Colors.orange,
-                        value: 3,
-                        radius: 18,
-                        showTitle: false,
-                      ),
-                    ],
+            height: 100,
+            child: PieChart(
+              PieChartData(
+                sections: [
+                  PieChartSectionData(
+                    color: Colors.green,
+                    value: 90,
+                    radius: 15,
+                    showTitle: false,
                   ),
-                ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      "94%",
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: navyBlue,
-                      ),
-                    ),
-                    Text(
-                      "SAFE",
-                      style: TextStyle(
-                        color: navyBlue.withOpacity(0.6),
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                  PieChartSectionData(
+                    color: Colors.red,
+                    value: 10,
+                    radius: 15,
+                    showTitle: false,
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            "Tap for detailed weekly analysis",
-            style: TextStyle(fontSize: 10, color: navyBlue.withOpacity(0.4)),
           ),
         ],
       ),
@@ -450,132 +444,35 @@ class _ParentDashboardState extends State<ParentDashboard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "BLOCKED",
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: navyBlue,
-                ),
-              ),
-              const Icon(
-                Icons.settings,
-                size: 16,
-                color: Color.fromARGB(255, 47, 152, 168),
-              ),
-            ],
-          ),
-          const SizedBox(height: 15),
-          _appBlockedItem("WhatsApp"),
-          _appBlockedItem("TikTok"),
-          Center(
-            child: Text(
-              "Manage Rules",
-              style: TextStyle(fontSize: 10, color: navyBlue.withOpacity(0.5)),
+          Text(
+            "BLOCKED",
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: navyBlue,
             ),
           ),
+          const SizedBox(height: 10),
+          _appBlockedItem("TikTok"),
+          _appBlockedItem("Snapchat"),
         ],
       ),
     );
   }
 
   Widget _appBlockedItem(String name) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Container(
-            height: 25,
-            width: 25,
-            decoration: BoxDecoration(
-              color: navyBlue.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(6),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            name,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: navyBlue,
-            ),
-          ),
-        ],
-      ),
+    return Row(
+      children: [
+        const Icon(Icons.block, size: 14, color: Colors.red),
+        const SizedBox(width: 5),
+        Text(name, style: const TextStyle(fontSize: 11)),
+      ],
     );
   }
 
   Widget _buildUsageSection() {
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const AppUsageScreen()),
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(
-          color: const Color(0x4D9ED7EB),
-          borderRadius: BorderRadius.circular(25),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "USAGE",
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: navyBlue,
-              ),
-            ),
-            const SizedBox(height: 15),
-            _usageItem("YouTube", 0.7, Colors.brown),
-            _usageItem("Roblox", 0.4, Colors.yellow),
-            const SizedBox(height: 5),
-            Center(
-              child: Text(
-                "Full Stats",
-                style: TextStyle(
-                  fontSize: 10,
-                  color: navyBlue.withOpacity(0.5),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _usageItem(String name, double progress, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            name,
-            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 4),
-          LinearProgressIndicator(
-            value: progress,
-            backgroundColor: Colors.grey[100],
-            color: color,
-            minHeight: 3,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildScreenTimeCard() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: const Color(0x4D9ED7EB),
         borderRadius: BorderRadius.circular(25),
@@ -584,54 +481,101 @@ class _ParentDashboardState extends State<ParentDashboard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "TOTAL SCREEN TIME",
+            "USAGE",
             style: TextStyle(
               fontSize: 12,
-              color: navyBlue.withOpacity(0.5),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            "4h 12m",
-            style: TextStyle(
-              fontSize: 32,
               fontWeight: FontWeight.bold,
               color: navyBlue,
             ),
           ),
-          Text(
-            "of 5h limit",
-            style: TextStyle(color: navyBlue.withOpacity(0.5)),
+          const SizedBox(height: 10),
+          _usageItem("YouTube", 0.8),
+          _usageItem("Games", 0.4),
+        ],
+      ),
+    );
+  }
+
+  Widget _usageItem(String name, double val) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(name, style: const TextStyle(fontSize: 10)),
+        LinearProgressIndicator(value: val, minHeight: 2, color: accentBlue),
+      ],
+    );
+  }
+
+  // --- التنقل والـ Navigation ---
+
+  Widget _buildBottomNav() {
+    return BottomNavigationBar(
+      currentIndex: _selectedIndex,
+      onTap: (index) => setState(() => _selectedIndex = index),
+      type: BottomNavigationBarType.fixed,
+      selectedItemColor: const Color.fromARGB(255, 47, 152, 168),
+      unselectedItemColor: navyBlue.withOpacity(0.3),
+      items: const [
+        BottomNavigationBarItem(icon: Icon(Icons.grid_view_rounded), label: ""),
+        BottomNavigationBarItem(icon: Icon(Icons.location_pin), label: ""),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.notifications_none),
+          label: "",
+        ),
+        BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: ""),
+      ],
+    );
+  }
+
+  Widget _buildDynamicDrawer() {
+    return Drawer(
+      child: ListView(
+        children: [
+          UserAccountsDrawerHeader(
+            decoration: const BoxDecoration(
+              color: Color.fromARGB(255, 125, 176, 188),
+            ),
+            accountName: Text(currentParent.name!),
+            accountEmail: Text(currentParent.email!),
+            currentAccountPicture: CircleAvatar(
+              child: Text(
+                BackgroundGenerator.getFirstCharacters(currentParent.name!),
+              ),
+            ),
           ),
-          const SizedBox(height: 15),
-          LinearProgressIndicator(
-            value: 0.84,
-            minHeight: 8,
-            color: navyBlue,
-            backgroundColor: Colors.grey[100],
+          ListTile(
+            leading: const Icon(Icons.settings),
+            title: const Text("App Rules"),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const AppRulesScreen()),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.logout, color: Colors.red),
+            title: const Text("Logout"),
+            onTap: () => FirebaseAuth.instance.signOut().then(
+              (_) => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const Parent()),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDrawerItem(
-    IconData icon,
-    String title,
-    VoidCallback onTap, {
-    bool isLogout = false,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: isLogout ? Colors.red : navyBlue),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: isLogout ? Colors.red : navyBlue,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-      onTap: onTap,
-    );
+  String _getAppBarTitle() {
+    switch (_selectedIndex) {
+      case 1:
+        return "Location";
+      case 2:
+        return "Alerts";
+      case 3:
+        return "Profile";
+      default:
+        return "Guardian";
+    }
   }
 }

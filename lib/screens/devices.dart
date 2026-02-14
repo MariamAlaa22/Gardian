@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:gardians/screens/addchild.dart';
 import '../utils/background_generator.dart';
 import '../utils/shared_prefs_utils.dart';
@@ -13,115 +15,7 @@ class DevicesScreen extends StatefulWidget {
 
 class _DevicesScreenState extends State<DevicesScreen> {
   final Color navyBlue = const Color(0xFF042459);
-
-  // القائمة الأساسية
-  List<Map<String, dynamic>> pairedDevices = [
-    {
-      "id": "dev_1",
-      "name": "Leo's iPhone 13",
-      "sub": "Active now",
-      "icon": Icons.phone_android,
-      "color": Colors.green,
-      "status": null,
-    },
-    {
-      "id": "dev_2",
-      "name": "Mila's iPad",
-      "sub": "Last seen 5m ago",
-      "icon": Icons.tablet_mac,
-      "color": Colors.grey,
-      "status": "OFFLINE",
-    },
-    {
-      "id": "dev_3",
-      "name": "Home Desktop",
-      "sub": "Monitoring active",
-      "icon": Icons.computer,
-      "color": Colors.orange,
-      "status": "RESTRICTED",
-    },
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _syncDevicesWithStorage();
-  }
-
-  // ميثود لمزامنة القائمة مع المحذوفات والأسماء المعدلة
-  void _syncDevicesWithStorage() {
-    setState(() {
-      // 1. استرجاع قائمة الـ IDs اللي اليوزر مسحها
-      List<String> deletedIds =
-          SharedPrefsUtils.getStringList("deleted_devices") ?? [];
-
-      // 2. فلترة القائمة الأساسية (نشيل منها أي ID موجود في قائمة المسح)
-      pairedDevices.removeWhere((device) => deletedIds.contains(device["id"]));
-
-      // 3. تحديث الأسماء المعدلة للأجهزة اللي فضلت
-      for (var device in pairedDevices) {
-        String? savedName = SharedPrefsUtils.getString(
-          "device_name_${device['id']}",
-        );
-        if (savedName != null) {
-          device["name"] = savedName;
-        }
-      }
-    });
-  }
-
-  // ميثود الحذف الدائم
-  void _deleteDevicePermanently(int index, String id) async {
-    // 1. نجيب قائمة المحذوفات الحالية
-    List<String> deletedIds =
-        SharedPrefsUtils.getStringList("deleted_devices") ?? [];
-
-    // 2. نضيف الـ ID الجديد للقائمة
-    deletedIds.add(id);
-
-    // 3. نحفظ القائمة المحدثة في الذاكرة
-    await SharedPrefsUtils.setStringList("deleted_devices", deletedIds);
-
-    // 4. نحدث الـ UI فوراً
-    setState(() {
-      pairedDevices.removeAt(index);
-    });
-  }
-
-  void _showEditDialog(int index, String currentName) {
-    TextEditingController _editController = TextEditingController(
-      text: currentName,
-    );
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Edit Device Name", style: TextStyle(color: navyBlue)),
-        content: TextField(controller: _editController, autofocus: true),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: navyBlue),
-            onPressed: () async {
-              if (_editController.text.isNotEmpty) {
-                setState(
-                  () => pairedDevices[index]["name"] = _editController.text,
-                );
-                await SharedPrefsUtils.setString(
-                  "device_name_${pairedDevices[index]['id']}",
-                  _editController.text,
-                );
-                if (context.mounted) Navigator.pop(context);
-              }
-            },
-            child: const Text("Save", style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
+  final String _parentUid = FirebaseAuth.instance.currentUser?.uid ?? "";
 
   @override
   Widget build(BuildContext context) {
@@ -136,17 +30,37 @@ class _DevicesScreenState extends State<DevicesScreen> {
         ),
         centerTitle: true,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: pairedDevices.isEmpty
-            ? const Center(child: Text("No devices paired."))
-            : ListView.separated(
-                itemCount: pairedDevices.length,
-                separatorBuilder: (context, index) =>
-                    const SizedBox(height: 15),
-                itemBuilder: (context, index) =>
-                    _buildDeviceCard(index, pairedDevices[index]),
-              ),
+      body: StreamBuilder(
+        // 1. مراقبة قائمة الـ IDs اللي تحت الأب
+        stream: FirebaseDatabase.instance
+            .ref("users/parents/$_parentUid/children")
+            .onValue,
+        builder: (context, AsyncSnapshot<DatabaseEvent> snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData ||
+              snapshot.data!.snapshot.value == null ||
+              snapshot.data!.snapshot.value is! Map) {
+            return _buildEmptyState();
+          }
+
+          final Map<dynamic, dynamic> childrenData = Map<dynamic, dynamic>.from(
+            snapshot.data!.snapshot.value as Map,
+          );
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(20),
+            itemCount: childrenData.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 15),
+            itemBuilder: (context, index) {
+              // الـ key هنا هو الـ ID بتاع الطفل
+              String childId = childrenData.keys.elementAt(index);
+              return _buildDeviceCard(childId);
+            },
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton(
         shape: const CircleBorder(),
@@ -160,81 +74,174 @@ class _DevicesScreenState extends State<DevicesScreen> {
     );
   }
 
-  Widget _buildDeviceCard(int index, Map<String, dynamic> device) {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(25),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+  Widget _buildDeviceCard(String childId) {
+    // 2. جلب "اسم الطفل" من نود users/children
+    return StreamBuilder(
+      stream: FirebaseDatabase.instance.ref("users/children/$childId").onValue,
+      builder: (context, AsyncSnapshot<DatabaseEvent> childSnapshot) {
+        if (!childSnapshot.hasData ||
+            childSnapshot.data!.snapshot.value == null) {
+          return const SizedBox.shrink();
+        }
+
+        final childData = Map<dynamic, dynamic>.from(
+          childSnapshot.data!.snapshot.value as Map,
+        );
+        String childName = childData['name'] ?? "Unknown Child";
+
+        // 3. جلب "الحالة الحية" من نود devices_data
+        return StreamBuilder(
+          stream: FirebaseDatabase.instance
+              .ref("devices_data/$childId")
+              .onValue,
+          builder: (context, AsyncSnapshot<DatabaseEvent> statusSnapshot) {
+            int battery = 0;
+            bool isOnline = false;
+
+            if (statusSnapshot.hasData &&
+                statusSnapshot.data!.snapshot.value != null) {
+              var statusMap = statusSnapshot.data!.snapshot.value as Map;
+              battery = statusMap['battery_level'] ?? 0;
+              isOnline = statusMap['is_online'] ?? false;
+            }
+
+            return Container(
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(color: Colors.grey.shade200),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 10,
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  InkWell(
+                    onTap: () async {
+                      // حفظ البيانات لكي يقرأها الـ Dashboard فوراً
+                      await SharedPrefsUtils.setString(
+                        Constants.childId,
+                        childId,
+                      );
+                      await SharedPrefsUtils.setString(
+                        Constants.childName,
+                        childName,
+                      );
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: navyBlue.withOpacity(0.1),
+                          child: Text(
+                            BackgroundGenerator.getFirstCharacters(childName),
+                            style: TextStyle(
+                              color: navyBlue,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 15),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              childName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              isOnline ? "Active Now" : "Offline",
+                              style: TextStyle(
+                                color: isOnline ? Colors.green : Colors.grey,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        _buildBatteryIndicator(battery),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 30),
+                  _buildActionButtons(),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildBatteryIndicator(int battery) {
+    return Column(
+      children: [
+        Icon(
+          battery > 20 ? Icons.battery_full : Icons.battery_alert,
+          color: battery > 20 ? Colors.green : Colors.red,
+          size: 20,
+        ),
+        Text("$battery%", style: const TextStyle(fontSize: 10)),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            icon: const Icon(Icons.history, size: 16),
+            label: const Text("Usage"),
+            onPressed: () {},
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: ElevatedButton.icon(
+            icon: const Icon(Icons.settings_outlined, size: 16),
+            label: const Text("Rules"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: navyBlue,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {},
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          InkWell(
-            onTap: () async {
-              await SharedPrefsUtils.setString(
-                Constants.childName,
-                device["name"],
-              );
-              if (context.mounted) Navigator.pop(context);
-            },
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: device["color"].withOpacity(0.1),
-                  child: Icon(device["icon"], color: device["color"]),
-                ),
-                const SizedBox(width: 15),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      device["name"],
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Text(
-                      device["sub"],
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                const Icon(
-                  Icons.check_circle_outline,
-                  color: Colors.blue,
-                  size: 20,
-                ),
-              ],
+          Icon(
+            Icons.devices_other,
+            size: 100,
+            color: navyBlue.withOpacity(0.1),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            "No devices paired yet",
+            style: TextStyle(
+              color: navyBlue,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          const Divider(height: 30),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.edit, size: 16),
-                  label: const Text("Edit"),
-                  onPressed: () => _showEditDialog(index, device["name"]),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.delete_outline, size: 16),
-                  label: const Text("Delete"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.shade400,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () =>
-                      _deleteDevicePermanently(index, device["id"]),
-                ),
-              ),
-            ],
-          ),
+          const SizedBox(height: 10),
+          const Text("Add your child's device to start monitoring"),
         ],
       ),
     );

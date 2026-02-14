@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:gardians/services/alert_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
@@ -99,6 +100,7 @@ class MainForegroundService {
 
     print("🚀 [Service] Engine Started for $childUid");
 
+    NotificationMonitor.startListening(childUid);
     // 2. تحديث حالة الاتصال (Online/Offline)
     _deviceDataRef.child("is_online").set(true);
     _deviceDataRef.child("is_online").onDisconnect().set(false);

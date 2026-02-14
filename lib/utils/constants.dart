@@ -2,6 +2,7 @@ class Constants {
   static const String childNameExtra = "child_name_extra";
   static const String childEmailExtra = "child_email_extra";
   static const String childAppNameExtra = "child_app_name_extra";
+  static const String childId = "child_id";
   static const String childName = "selected_child_name";
   static const String autoLogin = "auto_login";
   static const String email = "email";

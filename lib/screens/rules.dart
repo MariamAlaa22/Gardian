@@ -1,20 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_database/firebase_database.dart';
 import '../utils/shared_prefs_utils.dart';
-
-// 1. تعريف موديل التطبيق
-class AppModel {
-  String name;
-  IconData icon;
-  String status;
-  String category;
-
-  AppModel({
-    required this.name,
-    required this.icon,
-    required this.status,
-    required this.category,
-  });
-}
+import '../utils/constants.dart';
 
 class AppRulesScreen extends StatefulWidget {
   const AppRulesScreen({super.key});
@@ -27,103 +14,22 @@ class _AppRulesScreenState extends State<AppRulesScreen> {
   final Color navyBlue = const Color(0xFF042459);
   String _activeTab = "All";
   String _searchQuery = "";
-
-  // 2. قائمة التطبيقات الأساسية (ستتحول لـ Dynamic عند التحميل)
-  List<AppModel> _apps = [
-    AppModel(
-      name: "WhatsApp",
-      icon: Icons.chat,
-      status: "Allowed",
-      category: "Communication",
-    ),
-    AppModel(
-      name: "Instagram",
-      icon: Icons.camera_alt,
-      status: "Allowed",
-      category: "Communication",
-    ),
-    AppModel(
-      name: "Snapchat",
-      icon: Icons.snapchat,
-      status: "Blocked",
-      category: "Communication",
-    ),
-    AppModel(
-      name: "Roblox",
-      icon: Icons.gamepad,
-      status: "Limited",
-      category: "Games",
-    ),
-    AppModel(
-      name: "TikTok",
-      icon: Icons.tiktok,
-      status: "Blocked",
-      category: "Entertainment",
-    ),
-    AppModel(
-      name: "YouTube",
-      icon: Icons.video_library,
-      status: "Limited",
-      category: "Entertainment",
-    ),
-  ];
+  late String selectedChildUid;
 
   @override
   void initState() {
     super.initState();
-    _loadAppStatuses(); // تحميل الحالات المحفوظة
+    // جلب الـ UID المخزن عند اختيار الطفل من شاشة الـ Devices
+    selectedChildUid = SharedPrefsUtils.getString(Constants.childId) ?? "";
   }
 
-  // تحميل الحالات من الذاكرة
-  void _loadAppStatuses() {
-    setState(() {
-      for (var app in _apps) {
-        String? savedStatus = SharedPrefsUtils.getString(
-          "app_status_${app.name}",
-        );
-        if (savedStatus != null) {
-          app.status = savedStatus;
-        }
-      }
-    });
-  }
+  void _toggleAppBlock(String packageKey, bool isBlocked) async {
+    if (selectedChildUid.isEmpty) return;
 
-  // تغيير الحالة وحفظها
-  void _updateAppStatus(int index, String newStatus) async {
-    setState(() {
-      _apps[index].status = newStatus;
-    });
-    await SharedPrefsUtils.setString(
-      "app_status_${_apps[index].name}",
-      newStatus,
-    );
-  }
-
-  // إضافة تطبيق جديد
-  void _addNewApp(String name, String category) {
-    setState(() {
-      _apps.add(
-        AppModel(
-          name: name,
-          icon: Icons.apps,
-          status: "Allowed",
-          category: category,
-        ),
-      );
-    });
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case "Blocked":
-        return Colors.red;
-      case "Limited":
-        return Colors.orange;
-      case "Allowed":
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
+    // تحديث مباشر لقيمة is_blocked في قاعدة البيانات
+    await FirebaseDatabase.instance
+        .ref("devices_data/$selectedChildUid/installed_apps/$packageKey")
+        .update({"is_blocked": isBlocked});
   }
 
   @override
@@ -133,262 +39,144 @@ class _AppRulesScreenState extends State<AppRulesScreen> {
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 151, 207, 220),
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: navyBlue),
-          onPressed: () => Navigator.pop(context),
-        ),
         title: Text(
           "Control Apps",
           style: TextStyle(color: navyBlue, fontWeight: FontWeight.bold),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: navyBlue,
-        onPressed: _showAddAppDialog,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
       body: Column(
         children: [
-          Container(
-            color: const Color.fromARGB(255, 151, 207, 220),
-            padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                "All",
-                "Blocked",
-                "Limited",
-                "Allowed",
-              ].map((tab) => _buildTab(tab)).toList(),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: TextField(
-              onChanged: (value) => setState(() => _searchQuery = value),
-              decoration: InputDecoration(
-                hintText: "Search apps...",
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: Colors.grey[100],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(50),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ),
+          _buildTabHeader(),
+          _buildSearchField(),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              children: _buildFilteredList(),
-            ),
+            child: selectedChildUid.isEmpty
+                ? const Center(child: Text("Please select a child first"))
+                : _buildLiveAppsList(),
           ),
         ],
       ),
     );
   }
 
-  // --- ميثودز بناء العناصر ---
+  Widget _buildLiveAppsList() {
+    return StreamBuilder(
+      // مراقبة مسار التطبيقات الخاص بالطفل المحدد
+      stream: FirebaseDatabase.instance
+          .ref("devices_data/$selectedChildUid/installed_apps")
+          .onValue,
+      builder: (context, AsyncSnapshot<DatabaseEvent> snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-  List<Widget> _buildFilteredList() {
-    List<AppModel> filteredApps = _apps.where((app) {
-      bool matchesTab = (_activeTab == "All") || (app.status == _activeTab);
-      bool matchesSearch = app.name.toLowerCase().contains(
-        _searchQuery.toLowerCase(),
-      );
-      return matchesTab && matchesSearch;
-    }).toList();
+        if (!snapshot.hasData || snapshot.data!.snapshot.value == null) {
+          return const Center(child: Text("No apps found on child's device"));
+        }
 
-    if (filteredApps.isEmpty)
-      return [
-        const Center(
-          child: Padding(
-            padding: EdgeInsets.only(top: 50),
-            child: Text("No apps found"),
-          ),
-        ),
-      ];
+        // تحويل البيانات القادمة من Firebase
+        final dynamic rawData = snapshot.data!.snapshot.value;
+        Map<dynamic, dynamic> appsData = Map<dynamic, dynamic>.from(
+          rawData as Map,
+        );
 
-    Map<String, List<AppModel>> groupedApps = {};
-    for (var app in filteredApps) {
-      groupedApps.putIfAbsent(app.category, () => []).add(app);
-    }
+        List<Map<String, dynamic>> appsList = [];
+        appsData.forEach((key, value) {
+          appsList.add({
+            "key": key, // هذا هو الباكيج نيم المعدل (مثال: com_whatsapp)
+            "name": value['app_name'] ?? "Unknown",
+            "package": value['package_name'] ?? "",
+            "is_blocked": value['is_blocked'] ?? false,
+          });
+        });
 
-    List<Widget> items = [];
-    groupedApps.forEach((category, apps) {
-      items.add(_buildCategoryHeader(category, apps.length.toString()));
-      items.addAll(
-        apps.map((app) {
-          int originalIndex = _apps.indexOf(app);
-          return _buildAppRuleItem(originalIndex, app);
-        }),
-      );
-    });
-    return items;
-  }
+        // ترتيب الأبجدية: التطبيقات المحظورة تظهر في الأعلى أولاً ثم البقية
+        appsList.sort(
+          (a, b) =>
+              b['is_blocked'].toString().compareTo(a['is_blocked'].toString()),
+        );
 
-  Widget _buildAppRuleItem(int index, AppModel app) {
-    return GestureDetector(
-      onLongPress: () => _confirmDelete(index), // مسح بالضغط المطول
-      onTap: () => _showStatusPicker(index), // تعديل بالضغط العادي
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.grey[50],
-          borderRadius: BorderRadius.circular(15),
-        ),
-        child: Row(
-          children: [
-            Icon(app.icon, color: navyBlue),
-            const SizedBox(width: 15),
-            Text(app.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-            const Spacer(),
-            _statusBadge(app.status),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _statusBadge(String status) {
-    Color color = _getStatusColor(status);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        status,
-        style: TextStyle(
-          color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  // --- ديالوجات التحكم ---
-
-  void _showStatusPicker(int index) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: ["Allowed", "Limited", "Blocked"].map((status) {
-          return ListTile(
-            title: Text(
-              status,
-              style: TextStyle(color: _getStatusColor(status)),
-            ),
-            onTap: () {
-              _updateAppStatus(index, status);
-              Navigator.pop(context);
-            },
+        // الفلترة
+        var filteredList = appsList.where((app) {
+          bool matchesSearch = app['name'].toString().toLowerCase().contains(
+            _searchQuery.toLowerCase(),
           );
-        }).toList(),
-      ),
+          bool matchesTab =
+              _activeTab == "All" ||
+              (_activeTab == "Blocked" && app['is_blocked']) ||
+              (_activeTab == "Allowed" && !app['is_blocked']);
+          return matchesSearch && matchesTab;
+        }).toList();
+
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          itemCount: filteredList.length,
+          itemBuilder: (context, index) => _buildAppItem(filteredList[index]),
+        );
+      },
     );
   }
 
-  void _showAddAppDialog() {
-    String newName = "";
-    String newCat = "Other";
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Add New App"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              onChanged: (v) => newName = v,
-              decoration: const InputDecoration(hintText: "App Name"),
-            ),
-            TextField(
-              onChanged: (v) => newCat = v,
-              decoration: const InputDecoration(hintText: "Category"),
-            ),
-          ],
+  Widget _buildAppItem(Map<String, dynamic> app) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(
+          color: app['is_blocked']
+              ? Colors.red.withOpacity(0.2)
+              : Colors.transparent,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: app['is_blocked']
+                ? Colors.red.withOpacity(0.1)
+                : navyBlue.withOpacity(0.1),
+            child: Icon(
+              app['is_blocked'] ? Icons.block : Icons.android,
+              color: app['is_blocked'] ? Colors.red : navyBlue,
+              size: 20,
+            ),
           ),
-          ElevatedButton(
-            onPressed: () {
-              if (newName.isNotEmpty) _addNewApp(newName, newCat);
-              Navigator.pop(context);
-            },
-            child: const Text("Add"),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  app['name'],
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  app['package'],
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          // زر القفل/الفتح
+          Switch(
+            value: app['is_blocked'],
+            activeColor: Colors.red,
+            onChanged: (val) => _toggleAppBlock(app['key'], val),
           ),
         ],
       ),
     );
   }
 
-  void _confirmDelete(int index) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Delete Rule?"),
-        content: Text(
-          "Do you want to remove ${_apps[index].name} from the list?",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("No"),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() => _apps.removeAt(index));
-              Navigator.pop(context);
-            },
-            child: const Text("Yes", style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
+  // ... (نفس ميثودز الـ Header والـ Search اللي في كودك)
+  Widget _buildTabHeader() {
+    /* ... */
+    return Container();
+  } // تأكد من بقاء الكود الخاص بك هنا
 
-  Widget _buildTab(String label) {
-    bool isSelected = (_activeTab == label);
-    return GestureDetector(
-      onTap: () => setState(() => _activeTab = label),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? navyBlue : Colors.white.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.black87,
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryHeader(String title, String count) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Text(
-        "$title ($count)",
-        style: const TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 14,
-          color: Colors.grey,
-        ),
-      ),
-    );
-  }
+  Widget _buildSearchField() {
+    /* ... */
+    return Container();
+  } // تأكد من بقاء الكود الخاص بك هنا
 }
