@@ -91,7 +91,7 @@ class MainForegroundService {
     );
   }
 
-  static void startEngine(String childUid) {
+  static Future<void> startEngine(String childUid) async {
     // 1. تعريف المراجع بناءً على الـ UID المستلم
     _deviceDataRef = FirebaseDatabase.instance.ref("devices_data/$childUid");
     _rulesRef = FirebaseDatabase.instance.ref("rules/$childUid");
@@ -99,6 +99,11 @@ class MainForegroundService {
     _commsRef = FirebaseDatabase.instance.ref("communication_logs/$childUid");
 
     print("🚀 [Service] Engine Started for $childUid");
+    DataSnapshot snapshot = await FirebaseDatabase.instance
+        .ref("users/children/$childUid/name")
+        .get();
+    String childName = snapshot.value?.toString() ?? "Unknown Child";
+    print("🚀 [Service] Engine Started for $childName");
 
     NotificationMonitor.startListening(childUid);
     // 2. تحديث حالة الاتصال (Online/Offline)
@@ -113,13 +118,10 @@ class MainForegroundService {
 
     // 4. دورة تحديث الموقع والبطارية (كل 10 ثواني)
     Timer.periodic(const Duration(seconds: 10), (timer) async {
-      print("🚀 [Service] Fetching Location & Battery...");
       await _updateDeviceStatus();
     });
 
     Timer.periodic(const Duration(seconds: 2), (timer) async {
-      print("🚀 [Service] Fetching app usage");
-
       await _checkActiveApp(childUid);
     });
   }

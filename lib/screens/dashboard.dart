@@ -46,8 +46,9 @@ class _ParentDashboardState extends State<ParentDashboard> {
     _loadData();
   }
 
-  // ميثود واحدة لتحميل كل البيانات وتجنب الـ Reload المتكرر
-  void _loadData() {
+  // ميثود محسنة لضمان قراءة البيانات قبل تحديث الواجهة
+  Future<void> _loadData() async {
+    await SharedPrefsUtils.init(); // التأكد من تهيئة الـ SharedPreferences
     setState(() {
       // تحميل بيانات الأب
       String pName =
@@ -60,19 +61,17 @@ class _ParentDashboardState extends State<ParentDashboard> {
       selectedChildUid = SharedPrefsUtils.getString(Constants.childId) ?? "";
       selectedChildName =
           SharedPrefsUtils.getString(Constants.childName) ?? "Select Child";
-    });
-  }
 
-  void _refreshDashboard() {
-    _loadData();
+      debugPrint("🔄 Dashboard Refreshed: Child ID = $selectedChildUid");
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    // قائمة الصفحات يتم تعريفها داخل الـ build للتفاعل مع الـ selectedIndex
+    // التعديل الجوهري: إضافة UniqueKey لصفحة اللوكيشن لإجبارها على إعادة البناء وقراءة الـ ID الجديد
     final List<Widget> pages = [
       _dashboardBody(),
-      const ChildLocationScreen(),
+      ChildLocationScreen(key: UniqueKey()),
       const AlertsScreen(),
       const ProfileScreen(),
     ];
@@ -95,13 +94,13 @@ class _ParentDashboardState extends State<ParentDashboard> {
           ),
         ),
       ),
+      // استخدمنا IndexedStack لكن الـ UniqueKey سيقوم بتحديث صفحة اللوكيشن عند تغيير الـ Index
       body: IndexedStack(index: _selectedIndex, children: pages),
       bottomNavigationBar: _buildBottomNav(),
     );
   }
 
   Widget _dashboardBody() {
-    // لو مفيش طفل مختار، اطلب منه يختار واحد
     if (selectedChildUid.isEmpty) {
       return _buildNoChildState();
     }
@@ -156,7 +155,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
     );
   }
 
-  // --- كروت البيانات الحية ---
+  // --- Widgets الحية (بدون تعديل UI) ---
 
   Widget _buildLiveStatusCard(bool isOnline, int battery) {
     return Container(
@@ -209,7 +208,9 @@ class _ParentDashboardState extends State<ParentDashboard> {
     String appName = packageName.contains('.')
         ? packageName.split('.').last
         : packageName;
-    appName = appName[0].toUpperCase() + appName.substring(1);
+    appName = appName.isNotEmpty
+        ? appName[0].toUpperCase() + appName.substring(1)
+        : appName;
 
     return Container(
       width: double.infinity,
@@ -251,10 +252,15 @@ class _ParentDashboardState extends State<ParentDashboard> {
 
   Widget _buildChildSelectorCard() {
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const DevicesScreen()),
-      ).then((_) => _refreshDashboard()),
+      onTap: () async {
+        // ننتظر حتى يعود المستخدم من صفحة الأجهزة
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const DevicesScreen()),
+        );
+        // تحديث البيانات فور العودة
+        _loadData();
+      },
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -295,8 +301,6 @@ class _ParentDashboardState extends State<ParentDashboard> {
     );
   }
 
-  // --- شاشات الخطأ والتحميل ---
-
   Widget _buildNoChildState() {
     return Center(
       child: Column(
@@ -307,10 +311,13 @@ class _ParentDashboardState extends State<ParentDashboard> {
           const Text("Please select a child to monitor"),
           const SizedBox(height: 20),
           ElevatedButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const DevicesScreen()),
-            ).then((_) => _refreshDashboard()),
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const DevicesScreen()),
+              );
+              _loadData();
+            },
             child: const Text("Select Device"),
           ),
         ],
@@ -342,8 +349,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
     );
   }
 
-  // --- بقية الـ Widgets الخاصة بالتصميم (Screen Time, Charts, etc.) ---
-  // (نفس الـ Widgets الجميلة اللي صممتها سابقاً)
+  // --- الأجزاء الإضافية (Screen Time, AI Monitor, etc.) ---
 
   Widget _buildScreenTimeCard() {
     return Container(
@@ -506,12 +512,16 @@ class _ParentDashboardState extends State<ParentDashboard> {
     );
   }
 
-  // --- التنقل والـ Navigation ---
+  // --- Navigation & Drawer ---
 
   Widget _buildBottomNav() {
     return BottomNavigationBar(
       currentIndex: _selectedIndex,
-      onTap: (index) => setState(() => _selectedIndex = index),
+      onTap: (index) async {
+        // عند الضغط على أي زر في الـ Nav، نقوم بتحديث البيانات لضمان المزامنة
+        await _loadData();
+        setState(() => _selectedIndex = index);
+      },
       type: BottomNavigationBarType.fixed,
       selectedItemColor: const Color.fromARGB(255, 47, 152, 168),
       unselectedItemColor: navyBlue.withOpacity(0.3),
@@ -535,11 +545,13 @@ class _ParentDashboardState extends State<ParentDashboard> {
             decoration: const BoxDecoration(
               color: Color.fromARGB(255, 125, 176, 188),
             ),
-            accountName: Text(currentParent.name!),
-            accountEmail: Text(currentParent.email!),
+            accountName: Text(currentParent.name ?? "Parent"),
+            accountEmail: Text(currentParent.email ?? ""),
             currentAccountPicture: CircleAvatar(
               child: Text(
-                BackgroundGenerator.getFirstCharacters(currentParent.name!),
+                BackgroundGenerator.getFirstCharacters(
+                  currentParent.name ?? "P",
+                ),
               ),
             ),
           ),

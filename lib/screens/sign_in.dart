@@ -4,6 +4,8 @@ import 'package:gardians/screens/signup.dart'; // تأكد من اسم المل�
 import '../utils/validators.dart';
 import '../utils/shared_prefs_utils.dart';
 import '../utils/constants.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 // 1. استيراد الخدمة اللي عملناها
 import '../services/auth_service.dart';
 
@@ -101,16 +103,36 @@ class _SignInState extends State<SignIn> {
         );
 
         if (result == "success") {
-          // إذا نجح الدخول، نفعل الـ Auto Login ونحفظ الإيميل محلياً
+          // 1. الحصول على الـ UID الخاص بالأب الحالي
+          final String parentUid = FirebaseAuth.instance.currentUser?.uid ?? "";
+          String parentName = "Parent"; // قيمة افتراضية في حالة فشل الجلب
+
+          try {
+            // 2. جلب بيانات الأب من Firebase Realtime Database
+            DataSnapshot snapshot = await FirebaseDatabase.instance
+                .ref("users/parents/$parentUid/name")
+                .get();
+
+            if (snapshot.exists) {
+              parentName = snapshot.value.toString();
+            }
+          } catch (e) {
+            debugPrint("Error fetching parent name: $e");
+          }
+
+          // 3. حفظ البيانات في Shared preferences
           await SharedPrefsUtils.setBool(Constants.autoLogin, true);
           await SharedPrefsUtils.setString(
             Constants.email,
             _emailController.text.trim(),
           );
 
+          // حفظ الاسم الحقيقي اللي جبناه من الداتابيز
+          await SharedPrefsUtils.setString(Constants.name, parentName);
+
           if (!mounted) return;
 
-          // التوجه للداشبورد ومسح شريط التنقل بالكامل
+          // 4. التوجه للداشبورد
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (context) => const ParentDashboard()),

@@ -17,6 +17,16 @@ class _DevicesScreenState extends State<DevicesScreen> {
   final Color navyBlue = const Color(0xFF042459);
   final String _parentUid = FirebaseAuth.instance.currentUser?.uid ?? "";
 
+  // دالة موحدة لحفظ بيانات الطفل المختار في الـ Shared Preferences
+  Future<void> _saveChildData(String id, String name) async {
+    await SharedPrefsUtils.setString(Constants.childId, id);
+    await SharedPrefsUtils.setString(Constants.childName, name);
+    // تأكيد إضافي لضمان مطابقة الـ Key المستخدم في شاشة الخريطة
+    await SharedPrefsUtils.setString("selected_child_name", name);
+
+    debugPrint("✅ [Devices] Child Saved Globally: ID=$id, Name=$name");
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -31,7 +41,6 @@ class _DevicesScreenState extends State<DevicesScreen> {
         centerTitle: true,
       ),
       body: StreamBuilder(
-        // 1. مراقبة قائمة الـ IDs اللي تحت الأب
         stream: FirebaseDatabase.instance
             .ref("users/parents/$_parentUid/children")
             .onValue,
@@ -55,7 +64,6 @@ class _DevicesScreenState extends State<DevicesScreen> {
             itemCount: childrenData.length,
             separatorBuilder: (context, index) => const SizedBox(height: 15),
             itemBuilder: (context, index) {
-              // الـ key هنا هو الـ ID بتاع الطفل
               String childId = childrenData.keys.elementAt(index);
               return _buildDeviceCard(childId);
             },
@@ -75,7 +83,6 @@ class _DevicesScreenState extends State<DevicesScreen> {
   }
 
   Widget _buildDeviceCard(String childId) {
-    // 2. جلب "اسم الطفل" من نود users/children
     return StreamBuilder(
       stream: FirebaseDatabase.instance.ref("users/children/$childId").onValue,
       builder: (context, AsyncSnapshot<DatabaseEvent> childSnapshot) {
@@ -89,7 +96,6 @@ class _DevicesScreenState extends State<DevicesScreen> {
         );
         String childName = childData['name'] ?? "Unknown Child";
 
-        // 3. جلب "الحالة الحية" من نود devices_data
         return StreamBuilder(
           stream: FirebaseDatabase.instance
               .ref("devices_data/$childId")
@@ -106,7 +112,6 @@ class _DevicesScreenState extends State<DevicesScreen> {
             }
 
             return Container(
-              padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(25),
@@ -118,62 +123,68 @@ class _DevicesScreenState extends State<DevicesScreen> {
                   ),
                 ],
               ),
-              child: Column(
-                children: [
-                  InkWell(
-                    onTap: () async {
-                      // حفظ البيانات لكي يقرأها الـ Dashboard فوراً
-                      await SharedPrefsUtils.setString(
-                        Constants.childId,
-                        childId,
-                      );
-                      await SharedPrefsUtils.setString(
-                        Constants.childName,
-                        childName,
-                      );
-                      if (context.mounted) Navigator.pop(context);
-                    },
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: navyBlue.withOpacity(0.1),
-                          child: Text(
-                            BackgroundGenerator.getFirstCharacters(childName),
-                            style: TextStyle(
-                              color: navyBlue,
-                              fontWeight: FontWeight.bold,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(25),
+                onTap: () async {
+                  // 1. انتظر انتهاء عملية الحفظ تماماً
+                  await _saveChildData(childId, childName);
+
+                  // 2. تأكد أن البيانات طُبعت في الـ Console قبل الخروج
+                  debugPrint(
+                    "💾 [DevicesScreen] Final Save Check: ID=$childId",
+                  );
+
+                  if (context.mounted) {
+                    // 3. ارجع للداشبورد
+                    Navigator.pop(context);
+                  }
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(15),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: navyBlue.withOpacity(0.1),
+                            child: Text(
+                              BackgroundGenerator.getFirstCharacters(childName),
+                              style: TextStyle(
+                                color: navyBlue,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 15),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              childName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                          const SizedBox(width: 15),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                childName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
                               ),
-                            ),
-                            Text(
-                              isOnline ? "Active Now" : "Offline",
-                              style: TextStyle(
-                                color: isOnline ? Colors.green : Colors.grey,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
+                              Text(
+                                isOnline ? "Active Now" : "Offline",
+                                style: TextStyle(
+                                  color: isOnline ? Colors.green : Colors.grey,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const Spacer(),
-                        _buildBatteryIndicator(battery),
-                      ],
-                    ),
+                            ],
+                          ),
+                          const Spacer(),
+                          _buildBatteryIndicator(battery),
+                        ],
+                      ),
+                      const Divider(height: 30),
+                      _buildActionButtons(childId, childName),
+                    ],
                   ),
-                  const Divider(height: 30),
-                  _buildActionButtons(),
-                ],
+                ),
               ),
             );
           },
@@ -195,14 +206,17 @@ class _DevicesScreenState extends State<DevicesScreen> {
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(String id, String name) {
     return Row(
       children: [
         Expanded(
           child: OutlinedButton.icon(
             icon: const Icon(Icons.history, size: 16),
             label: const Text("Usage"),
-            onPressed: () {},
+            onPressed: () async {
+              await _saveChildData(id, name);
+              // Navigator.pushNamed(context, '/usage');
+            },
           ),
         ),
         const SizedBox(width: 10),
@@ -214,7 +228,10 @@ class _DevicesScreenState extends State<DevicesScreen> {
               backgroundColor: navyBlue,
               foregroundColor: Colors.white,
             ),
-            onPressed: () {},
+            onPressed: () async {
+              await _saveChildData(id, name);
+              // Navigator.pushNamed(context, '/rules');
+            },
           ),
         ),
       ],
