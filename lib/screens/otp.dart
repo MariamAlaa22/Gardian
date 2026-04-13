@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:gardians/screens/permission.dart';
+import 'package:gardians/constants/pairing_constants.dart';
+import 'package:gardians/services/guardian_native_bridge.dart';
+import 'package:gardians/services/pairing_service.dart';
 import 'package:pinput/pinput.dart';
 import 'dart:async';
 
@@ -12,6 +14,7 @@ class OTPScreen extends StatefulWidget {
 
 class _OTPScreenState extends State<OTPScreen> {
   final TextEditingController _otpController = TextEditingController();
+  final PairingService _pairingService = PairingService();
   int _seconds = 30;
   late Timer _timer;
   bool _isLoading = false; 
@@ -111,7 +114,7 @@ class _OTPScreenState extends State<OTPScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "Enter the code sent to your email",
+                    "Enter parent $pairingCodeLength-digit code",
                     style: TextStyle(
                         color: navyBlue.withValues(alpha:0.5), fontSize: 14),
                   ),
@@ -129,7 +132,7 @@ class _OTPScreenState extends State<OTPScreen> {
             ),
             const SizedBox(height: 15),
             Pinput(
-              length: 4,
+              length: pairingCodeLength,
               controller: _otpController,
               defaultPinTheme: defaultPinTheme,
               onChanged: (value) => setState(() {}),
@@ -148,26 +151,26 @@ class _OTPScreenState extends State<OTPScreen> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(50)),
               ),
-              onPressed: (_isLoading || _otpController.text.length < 4)
+              onPressed: (_isLoading || _otpController.text.length < pairingCodeLength)
                   ? null
                   : () async {
                       setState(() => _isLoading = true);
 
-                      await Future.delayed(const Duration(seconds: 2));
-
                       if (!context.mounted) return;
 
-                      if (_otpController.text == "1234") {
+                      try {
+                        final parentUid = await _pairingService.linkChildWithCode(_otpController.text);
+                        await GuardianNativeBridge.uploadContacts();
                         setState(() => _isLoading = false);
-
+                        if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: const Row(
+                            content: Row(
                               children: [
                                 Icon(Icons.check_circle,
                                     color: Colors.white, size: 20),
                                 SizedBox(width: 10),
-                                Text("Paired Successfully!",
+                                Text("Paired Successfully! Parent: $parentUid",
                                     style: TextStyle(fontWeight: FontWeight.bold)),
                               ],
                             ),
@@ -180,18 +183,13 @@ class _OTPScreenState extends State<OTPScreen> {
                                 bottom: 20, left: 20, right: 20),
                           ),
                         );
-
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const ParentGrantPermissions()),
-                        );
-                      } else {
+                      } catch (e) {
                         setState(() => _isLoading = false);
                         _otpController.clear();
+                        if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Invalid Code! Try 1234"),
+                          SnackBar(
+                            content: Text("Invalid Code: $e"),
                             backgroundColor: Colors.red,
                           ),
                         );

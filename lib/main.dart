@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
-import 'screens/app_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'screens/test_hub_screen.dart';
 
 void main() async {
-  // This line MUST be here before any plugin initializes
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  if (FirebaseAuth.instance.currentUser == null) {
+    await FirebaseAuth.instance.signInAnonymously();
+  }
 
   runApp(const MyApp());
 }
@@ -16,7 +21,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Guardian',
       debugShowCheckedModeBanner: false,
-      home: const AppsScreen(),
+      home: const TestHubScreen(),
     );
   }
 }

@@ -1,0 +1,8 @@
+<resources>
+    <string name="unknown_number">Unknown Number</string>
+    <string name="stop">Stop</string>
+    <string name="is_out_of_the_fence"> is out of the fence</string>
+    <string name="a_moment_ago">a moment ago</string>
+    <string name="minutes_ago">minutes ago</string>
+    <string name="yesterday">yesterday</string>
+</resources>
