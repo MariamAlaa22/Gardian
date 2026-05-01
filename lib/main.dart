@@ -1,27 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:gardians/screens/Signup.dart';
-import 'package:gardians/screens/sign_in.dart';
-import 'package:gardians/screens/splash.dart';
-import 'package:gardians/screens/welcome.dart';
+import 'package:gardians/screens/profile/profile.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const GuardianApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class GuardianApp extends StatelessWidget {
+  const GuardianApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Guardian',
       debugShowCheckedModeBanner: false,
-      initialRoute: "/",
-      routes: {
-        "/": (context) => const Splash(),
-        "/welcome": (context) => const Welcome(),
-        "/sign_in": (context) => const SignIn(),
-        "/SignUp": (context) => const Signup(),
-      },
+      home: const ProfileScreen(),
     );
   }
 }
