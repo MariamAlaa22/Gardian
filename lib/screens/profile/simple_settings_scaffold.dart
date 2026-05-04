@@ -16,7 +16,7 @@ class SimpleSettingsScaffold extends StatelessWidget {
     return Scaffold(
       backgroundColor: ProfileColors.pageBackground,
       appBar: AppBar(
-        backgroundColor: ProfileColors.pageBackground,
+        backgroundColor: Color.fromARGB(255, 151, 207, 220),
         elevation: 0,
         iconTheme: const IconThemeData(color: ProfileColors.navyBlue),
         title: Text(

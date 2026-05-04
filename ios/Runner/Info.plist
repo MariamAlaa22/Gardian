@@ -45,5 +45,7 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Guardians needs the microphone so Peat can repeat what you say in a fun, safe voice.</string>
 </dict>
 </plist>

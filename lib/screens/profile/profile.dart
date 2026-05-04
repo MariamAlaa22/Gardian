@@ -1,14 +1,14 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+
 import 'package:gardians/screens/profile/app_language_screen.dart';
 import 'package:gardians/screens/profile/change_password_screen.dart';
-import 'package:gardians/screens/profile/help_support_screen.dart';
 import 'package:gardians/screens/profile/notification_settings_screen.dart';
+import 'package:gardians/screens/profile/help_support_screen.dart';
 import 'package:gardians/screens/profile/privacy_policy_screen.dart';
-import 'package:gardians/screens/profile/profile_constants.dart';
 import 'package:gardians/screens/profile/terms_of_service_screen.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:gardians/screens/welcome.dart'; 
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -20,6 +20,10 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final ImagePicker _picker = ImagePicker();
 
+  final Color navyBlue = const Color(0xFF042459);
+  final Color skyBlue = const Color(0xFF9ED7EB);
+  final Color backgroundGrey = const Color(0xFFF8F9FA);
+
   String _displayName = 'Sarah Miller';
   final String _email = 'sarah.miller@guardian-app.com';
   File? _profilePhoto;
@@ -27,387 +31,193 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ProfileColors.pageBackground,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(18, 12, 18, 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildPageHeader(context),
-              const SizedBox(height: 14),
-              _buildProfileCard(),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Account Settings'),
-              const SizedBox(height: 10),
-              _buildCard(
-                children: [
-                  _buildOptionTile(
-                    icon: Icons.language_rounded,
-                    title: 'App Language',
-                    subtitle: 'English (US)',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const AppLanguageScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildOptionTile(
-                    icon: Icons.lock_outline_rounded,
-                    title: 'Change Password',
-                    subtitle: 'Last updated 3 months ago',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ChangePasswordScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildOptionTile(
-                    icon: Icons.notifications_none_rounded,
-                    title: 'Notifications',
-                    subtitle: 'Push, Email and SMS',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const NotificationSettingsScreen(),
-                        ),
-                      );
-                    },
-                    hasDivider: false,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Support & Legal'),
-              const SizedBox(height: 10),
-              _buildCard(
-                children: [
-                  _buildOptionTile(
-                    icon: Icons.help_outline_rounded,
-                    title: 'Help & Support',
-                    subtitle: 'FAQs and customer service',
-                    trailing: const Icon(
-                      Icons.open_in_new_rounded,
-                      color: Color(0xFF8B97A7),
-                      size: 20,
-                    ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const HelpSupportScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildOptionTile(
-                    icon: Icons.privacy_tip_outlined,
-                    title: 'Privacy Policy',
-                    subtitle: 'How we protect your data',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const PrivacyPolicyScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildOptionTile(
-                    icon: Icons.description_outlined,
-                    title: 'Terms of Service',
-                    subtitle: 'User agreement',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const TermsOfServiceScreen(),
-                        ),
-                      );
-                    },
-                    hasDivider: false,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              OutlinedButton.icon(
-                onPressed: _showLogoutDialog,
-                icon: const Icon(
-                  Icons.logout_rounded,
-                  color: Color(0xFFC24747),
-                  size: 18,
-                ),
-                label: const Text(
-                  'Logout Account',
-                  style: TextStyle(
-                    color: Color(0xFFC24747),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 54),
-                  side: const BorderSide(color: Color(0xFFE3E7EF)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  backgroundColor: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 14),
-              const Center(
-                child: Text(
-                  'App Version 2.4.12 (Build 108)',
-                  style: TextStyle(
-                    color: Color(0xFF8D98A9),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
+      backgroundColor: backgroundGrey, 
+      appBar: AppBar(
+        backgroundColor: const Color.fromARGB(255, 151, 207, 220),
+        elevation: 0,
+        title: Text("Profile", style: TextStyle(color: navyBlue, fontWeight: FontWeight.bold)),
+        centerTitle: true,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            _buildProfileCard(),
+            const SizedBox(height: 24),
+            _buildSettingsSection(
+              title: "ACCOUNT SETTINGS",
+              children: [
+                _buildOptionTile(Icons.language_rounded, "App Language", "English (US)", () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AppLanguageScreen()));
+                }),
+                _buildOptionTile(Icons.lock_outline_rounded, "Change Password", "Security settings", () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen()));
+                }),
+                _buildOptionTile(Icons.notifications_none_rounded, "Notifications", "Alerts & Sounds", () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationSettingsScreen()));
+                }, isLast: true),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _buildSettingsSection(
+              title: "SUPPORT & LEGAL",
+              children: [
+                _buildOptionTile(Icons.help_outline_rounded, "Help & Support", "FAQs", () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportScreen()));
+                }),
+                _buildOptionTile(Icons.privacy_tip_outlined, "Privacy Policy", "Data safety", () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()));
+                }),
+                _buildOptionTile(Icons.description_outlined, "Terms of Service", "User agreement", () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const TermsOfServiceScreen()));
+                }, isLast: true),
+              ],
+            ),
+            const SizedBox(height: 30),
+            _buildLogoutButton(),
+            const SizedBox(height: 20),
+            Text(
+              "App Version 2.4.12",
+              style: TextStyle(color: navyBlue.withValues(alpha: 0.4), fontSize: 12),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildPageHeader(BuildContext context) {
-    return Row(
-      children: [
-        IconButton(
-          onPressed: () {
-            if (Navigator.of(context).canPop()) {
-              Navigator.of(context).pop();
-            }
-          },
-          icon: const Icon(
-            Icons.arrow_back_rounded,
-            color: ProfileColors.navyBlue,
-          ),
-        ),
-        const SizedBox(width: 4),
-        const Text(
-          'Settings',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
-            color: ProfileColors.navyBlue,
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildProfileCard() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE7ECF4)),
+        color: skyBlue.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(30),
       ),
       child: Column(
         children: [
-          Stack(
-            children: [
-              GestureDetector(
-                onTap: _showPhotoSourceSheet,
-                child: CircleAvatar(
-                  radius: 52,
-                  backgroundColor: ProfileColors.skyBlue.withValues(
-                    alpha: 0.25,
-                  ),
-                  backgroundImage: _profilePhoto != null
-                      ? FileImage(_profilePhoto!)
-                      : const NetworkImage('https://i.pravatar.cc/150?img=5'),
-                ),
-              ),
-              Positioned(
-                right: 0,
-                bottom: 2,
-                child: GestureDetector(
-                  onTap: _showPhotoSourceSheet,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(
-                      color: ProfileColors.navyBlue,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.edit_rounded,
-                      size: 16,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          GestureDetector(
-            onTap: _showEditNameDialog,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  _displayName,
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: ProfileColors.navyBlue,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.edit_rounded,
-                  size: 18,
-                  color: Color(0xFF7A8699),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            _email,
-            style: const TextStyle(fontSize: 14, color: Color(0xFF7B8698)),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: ProfileColors.skyBlue.withValues(alpha: 0.22),
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0F3FA),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Text(
-              'Joined May 2023',
-              style: TextStyle(
-                color: Color(0xFF5D6980),
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
+          _buildAvatar(),
+          const SizedBox(height: 15),
+          _buildEditableName(), 
+          Text(_email, style: TextStyle(color: navyBlue.withValues(alpha: 0.6))),
         ],
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        color: ProfileColors.navyBlue,
-        fontSize: 21,
-        fontWeight: FontWeight.w700,
+  Widget _buildEditableName() {
+    return GestureDetector(
+      onTap: _showEditNameDialog, 
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            _displayName,
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: navyBlue),
+          ),
+          const SizedBox(width: 8),
+          Icon(Icons.edit_rounded, size: 18, color: navyBlue.withValues(alpha: 0.5)),
+        ],
       ),
     );
   }
 
-  Widget _buildCard({required List<Widget> children}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE7ECF4)),
-      ),
-      child: Column(children: children),
-    );
-  }
-
-  Widget _buildOptionTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    Widget? trailing,
-    bool hasDivider = true,
-  }) {
-    return Column(
+  Widget _buildAvatar() {
+    return Stack(
+      alignment: Alignment.center,
       children: [
-        ListTile(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 2,
+        CircleAvatar(
+          radius: 55,
+          backgroundColor: Colors.white,
+          child: CircleAvatar(
+            radius: 52,
+            backgroundImage: _profilePhoto != null 
+                ? FileImage(_profilePhoto!) 
+                : const NetworkImage('https://i.pravatar.cc/150?img=5') as ImageProvider,
           ),
-          leading: Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: ProfileColors.skyBlue.withValues(alpha: 0.25),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: ProfileColors.navyBlue),
-          ),
-          title: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              color: ProfileColors.navyBlue,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          subtitle: Text(
-            subtitle,
-            style: const TextStyle(fontSize: 13, color: Color(0xFF8291A8)),
-          ),
-          trailing:
-              trailing ??
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: Color(0xFF8392A9),
-                size: 26,
-              ),
-          onTap: onTap,
         ),
-        if (hasDivider)
-          const Divider(
-            height: 1,
-            indent: 70,
-            endIndent: 12,
-            color: Color(0xFFE9EDF4),
+        Positioned(
+          bottom: 0, right: 0,
+          child: GestureDetector(
+            onTap: _showPhotoSourceSheet,
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: navyBlue,
+              child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 18),
+            ),
           ),
+        ),
       ],
     );
   }
 
-  Future<void> _showEditNameDialog() async {
-    final TextEditingController controller = TextEditingController(
-      text: _displayName,
+  Widget _buildSettingsSection({required String title, required List<Widget> children}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 10, bottom: 8),
+          child: Text(title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: navyBlue.withValues(alpha: 0.5))),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: skyBlue.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(25),
+          ),
+          child: Column(children: children),
+        ),
+      ],
     );
+  }
+
+  Widget _buildOptionTile(IconData icon, String title, String subtitle, VoidCallback onTap, {bool isLast = false}) {
+    return ListTile(
+      onTap: onTap,
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+        child: Icon(icon, color: navyBlue, size: 22),
+      ),
+      title: Text(title, style: TextStyle(color: navyBlue, fontWeight: FontWeight.bold, fontSize: 15)),
+      subtitle: Text(subtitle, style: TextStyle(color: navyBlue.withValues(alpha: 0.5), fontSize: 12)),
+      trailing: Icon(Icons.arrow_forward_ios_rounded, color: navyBlue.withValues(alpha: 0.3), size: 16),
+      shape: isLast ? null : Border(bottom: BorderSide(color: navyBlue.withValues(alpha: 0.05))),
+    );
+  }
+
+  Widget _buildLogoutButton() {
+    return OutlinedButton.icon(
+      onPressed: () {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const Welcome()));
+      },
+      icon: const Icon(Icons.logout_rounded, color: Color(0xFFC24747), size: 18),
+      label: const Text('Logout Account', style: TextStyle(color: Color(0xFFC24747), fontWeight: FontWeight.w600, fontSize: 18)),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(double.infinity, 54),
+        side: const BorderSide(color: Color(0xFFE3E7EF)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+        backgroundColor: navyBlue,
+      ),
+    );
+  }
+
+  
+  Future<void> _showEditNameDialog() async {
+    final TextEditingController controller = TextEditingController(text: _displayName);
     final String? updatedName = await showDialog<String>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Update Name'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Update Name', style: TextStyle(color: navyBlue, fontWeight: FontWeight.bold)),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'Enter your display name',
-            border: OutlineInputBorder(),
-          ),
-          textInputAction: TextInputAction.done,
+          decoration: const InputDecoration(hintText: 'Enter your name', border: OutlineInputBorder()),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel', style: TextStyle(color: navyBlue))),
           FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: navyBlue),
             onPressed: () => Navigator.pop(context, controller.text.trim()),
             child: const Text('Save'),
           ),
@@ -416,89 +226,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (updatedName != null && updatedName.isNotEmpty) {
-      setState(() {
-        _displayName = updatedName;
-      });
+      setState(() => _displayName = updatedName);
     }
   }
 
-  Future<void> _showPhotoSourceSheet() async {
-    await showModalBottomSheet<void>(
+  Future<void> _pickProfileImage(ImageSource source) async {
+    final XFile? pickedFile = await _picker.pickImage(source: source, imageQuality: 70);
+    if (pickedFile != null) setState(() => _profilePhoto = File(pickedFile.path));
+  }
+
+  void _showPhotoSourceSheet() {
+    showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
       builder: (_) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
+          padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const ListTile(
-                title: Text(
-                  'Change profile photo',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
+              Text("Change Profile Photo", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: navyBlue)),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: Icon(Icons.photo_library_rounded, color: navyBlue),
+                title: const Text("Gallery"),
+                onTap: () { Navigator.pop(context); _pickProfileImage(ImageSource.gallery); },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library_outlined),
-                title: const Text('Choose from gallery'),
-                onTap: () async {
-                  Navigator.pop(context);
-                  await _pickProfileImage(ImageSource.gallery);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_camera_outlined),
-                title: const Text('Take a photo'),
-                onTap: () async {
-                  Navigator.pop(context);
-                  await _pickProfileImage(ImageSource.camera);
-                },
+                leading: Icon(Icons.camera_alt_rounded, color: navyBlue),
+                title: const Text("Camera"),
+                onTap: () { Navigator.pop(context); _pickProfileImage(ImageSource.camera); },
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Future<void> _pickProfileImage(ImageSource source) async {
-    final XFile? pickedFile = await _picker.pickImage(
-      source: source,
-      imageQuality: 70,
-    );
-    if (pickedFile == null) {
-      return;
-    }
-    setState(() {
-      _profilePhoto = File(pickedFile.path);
-    });
-  }
-
-  Future<void> _showLogoutDialog() async {
-    await showDialog<void>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Do you want to logout from this account?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Logout action is ready to connect.'),
-                ),
-              );
-            },
-            child: const Text('Logout'),
-          ),
-        ],
       ),
     );
   }

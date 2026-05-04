@@ -6,17 +6,20 @@ class TermsOfServiceScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const SimpleSettingsScaffold(
+    return  SimpleSettingsScaffold(
       title: 'Terms of Service',
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Text(
-          'By using SafeGuard, you agree to use monitoring tools responsibly and in compliance with local laws. '
-          'Parents remain responsible for consent, account security, and protected-device configuration.',
-          style: TextStyle(
-            fontSize: 16,
-            color: Color(0xFF526077),
-            height: 1.45,
+      child: Container(
+        color: const Color(0xFFEEF8FC),
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Text(
+            'By using SafeGuard, you agree to use monitoring tools responsibly and in compliance with local laws. '
+            'Parents remain responsible for consent, account security, and protected-device configuration.',
+            style: TextStyle(
+              fontSize: 16,
+              color: Color(0xFF526077),
+              height: 1.45,
+            ),
           ),
         ),
       ),

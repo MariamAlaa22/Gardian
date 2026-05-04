@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gardians/screens/profile/profile.dart';
+import 'package:gardians/screens/guardians_main_screen.dart';
 
 void main() {
   runApp(const GuardianApp());
@@ -11,9 +11,13 @@ class GuardianApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Guardian',
+      title: 'Guardians',
       debugShowCheckedModeBanner: false,
-      home: const ProfileScreen(),
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF042459)),
+        useMaterial3: true,
+      ),
+      home: const GuardiansMainScreen(),
     );
   }
 }

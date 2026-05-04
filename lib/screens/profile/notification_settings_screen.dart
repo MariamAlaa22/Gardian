@@ -75,45 +75,50 @@ class _NotificationSettingsScreenState
   Widget build(BuildContext context) {
     return SimpleSettingsScaffold(
       title: 'Notifications',
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // ── Global toggles ──
-          _sectionLabel('General'),
-          const SizedBox(height: 8),
-          _toggleTile(
-            title: 'Push notifications',
-            subtitle: 'Receive in-app alerts on this device',
-            value: _pushEnabled,
-            onChanged: (v) => setState(() => _pushEnabled = v),
-          ),
-          _toggleTile(
-            title: 'Email alerts',
-            subtitle: 'Get security events by email',
-            value: _emailEnabled,
-            onChanged: (v) => setState(() => _emailEnabled = v),
-          ),
-          _toggleTile(
-            title: 'SMS alerts',
-            subtitle: 'Critical alerts by text message',
-            value: _smsEnabled,
-            onChanged: (v) => setState(() => _smsEnabled = v),
-          ),
-          _toggleTile(
-            title: 'Security & privacy updates',
-            subtitle: 'Important policy and account updates',
-            value: _securityAlerts,
-            onChanged: (v) => setState(() => _securityAlerts = v),
-          ),
+      child: Container(
+        color: const Color(0xFFEEF8FC),
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _sectionLabel('General'),
+            const SizedBox(height: 10),
 
-          const SizedBox(height: 8),
+            _toggleTile(
+              title: 'Push notifications',
+              subtitle: 'Receive in-app alerts on this device',
+              value: _pushEnabled,
+              onChanged: (v) => setState(() => _pushEnabled = v),
+            ),
 
-          // ── Per-child sound ──
-          _sectionLabel('Per-child notification sound'),
-          const SizedBox(height: 8),
+            _toggleTile(
+              title: 'Email alerts',
+              subtitle: 'Get security events by email',
+              value: _emailEnabled,
+              onChanged: (v) => setState(() => _emailEnabled = v),
+            ),
 
-          ..._mockDevices.map((device) => _childSoundCard(device)),
-        ],
+            _toggleTile(
+              title: 'SMS alerts',
+              subtitle: 'Critical alerts by text message',
+              value: _smsEnabled,
+              onChanged: (v) => setState(() => _smsEnabled = v),
+            ),
+
+            _toggleTile(
+              title: 'Security & privacy updates',
+              subtitle: 'Important policy updates',
+              value: _securityAlerts,
+              onChanged: (v) => setState(() => _securityAlerts = v),
+            ),
+
+            const SizedBox(height: 16),
+
+            _sectionLabel('Per-child notification sound'),
+            const SizedBox(height: 10),
+
+            ..._mockDevices.map((device) => _childSoundCard(device)),
+          ],
+        ),
       ),
     );
   }
@@ -142,12 +147,18 @@ class _NotificationSettingsScreenState
     required ValueChanged<bool> onChanged,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: const Color(0xFFE7ECF4)),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -163,7 +174,7 @@ class _NotificationSettingsScreenState
                     fontSize: 15,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
                   subtitle,
                   style: const TextStyle(
@@ -174,7 +185,15 @@ class _NotificationSettingsScreenState
               ],
             ),
           ),
-          Switch.adaptive(value: value, onChanged: onChanged),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeThumbColor: ProfileColors.navyBlue, 
+            activeTrackColor: const Color(0xFF9ED7EB), 
+
+            inactiveThumbColor: ProfileColors.navyBlue, 
+            inactiveTrackColor: const Color(0xFFEAF6FB),
+          ),
         ],
       ),
     );
@@ -186,23 +205,27 @@ class _NotificationSettingsScreenState
     final sound = _deviceSounds[device.id] ?? kPredefinedSounds.first;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: const Color(0xFFE7ECF4)),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          // Child info
           Padding(
             padding: const EdgeInsets.all(14),
             child: Row(
               children: [
-                // Avatar
                 Container(
-                  width: 42,
-                  height: 42,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                     color: colors[0],
                     shape: BoxShape.circle,
@@ -245,75 +268,45 @@ class _NotificationSettingsScreenState
             ),
           ),
 
-          // Sound row
           InkWell(
             onTap: () => _openSoundPicker(device),
             borderRadius: const BorderRadius.vertical(
-              bottom: Radius.circular(14),
+              bottom: Radius.circular(18),
             ),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: Color(0xFFF0F3F9))),
+                border: Border(top: BorderSide(color: Color(0xFFF2F6FB))),
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 30,
-                    height: 30,
+                    width: 32,
+                    height: 32,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEAF1FF),
-                      borderRadius: BorderRadius.circular(8),
+                      color: const Color(0xFFEAF6FB),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
                       Icons.volume_up_rounded,
-                      size: 16,
-                      color: Color(0xFF3A7CF8),
+                      size: 18,
+                      color: ProfileColors.navyBlue,
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          sound.label,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: ProfileColors.navyBlue,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: sound.isCustom
-                                ? const Color(0xFFFFF0EA)
-                                : const Color(0xFFEAF1FF),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            sound.isCustom ? 'Custom' : 'Predefined',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: sound.isCustom
-                                  ? const Color(0xFF993C1D)
-                                  : const Color(0xFF3A7CF8),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      sound.label,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: ProfileColors.navyBlue,
+                      ),
                     ),
                   ),
                   const Icon(
                     Icons.chevron_right_rounded,
                     color: Color(0xFF74839A),
-                    size: 20,
                   ),
                 ],
               ),
